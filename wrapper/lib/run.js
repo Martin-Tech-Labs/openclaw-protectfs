@@ -31,6 +31,30 @@ function teeChildOutput(child, name) {
   if (child.stderr) child.stderr.on('data', (d) => process.stderr.write(`[${name}:stderr] ${d}`));
 }
 
+function buildChildEnv(extraEnv = {}) {
+  // Hardening: do not leak our full environment into child processes.
+  // Keep a pragmatic allow-list for common process execution on macOS.
+  const allow = [
+    'PATH',
+    'HOME',
+    'TMPDIR',
+    'LANG',
+    'LC_ALL',
+    'LC_CTYPE',
+    'TERM',
+    'SHELL',
+    'USER',
+    'LOGNAME',
+  ];
+
+  const env = {};
+  for (const k of allow) {
+    if (Object.prototype.hasOwnProperty.call(process.env, k)) env[k] = process.env[k];
+  }
+
+  return { ...env, ...extraEnv };
+}
+
 async function waitForReady(child, opts) {
   const timeoutMs = opts && Number.isFinite(opts.timeoutMs) ? opts.timeoutMs : 2000;
   const needle = (opts && opts.line) || 'READY';
@@ -232,7 +256,7 @@ async function run(cfg) {
     return EXIT.LIVENESS;
   }
 
-  const childEnv = { ...process.env, OCPROTECTFS_LIVENESS_SOCK: liveness.path };
+  const childEnv = buildChildEnv({ OCPROTECTFS_LIVENESS_SOCK: liveness.path });
 
   const fuse = spawn(cfg.fuseBin, cfg.fuseArgs, {
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -259,6 +283,11 @@ async function run(cfg) {
     if (cfg.requireFuseReady) {
       log(`fuse readiness not detected (${ready.reason}); failing closed`);
       try {
+        // Give the child a brief chance to run any early init (like writing a
+        // pidfile) before we send termination signals. This makes behavior more
+        // deterministic under heavy load and tiny readiness timeouts.
+        await sleep(100);
+
         await shutdownBoth(fuse.pid, null, cfg.shutdownTimeoutMs);
       } catch (e) {
         // Best-effort: failing closed should still return a stable exit code
@@ -344,7 +373,12 @@ async function shutdownBoth(fusePid, gatewayPid, timeoutMs) {
   if (gatewayPid) terminateProcessGroup(gatewayPid, 'SIGTERM');
   if (fusePid) terminateProcessGroup(fusePid, 'SIGTERM');
 
-  const deadline = Date.now() + timeoutMs;
+  // Hardening: if callers configure an extremely small timeout, still allow a
+  // minimal grace period before escalating to SIGKILL. The polling interval is
+  // 50ms, so timeouts smaller than that would otherwise skip the wait entirely.
+  const effectiveTimeoutMs = Math.max(Number(timeoutMs) || 0, 50);
+
+  const deadline = Date.now() + effectiveTimeoutMs;
   while (Date.now() < deadline) {
     const gwAlive = gatewayPid ? isAlive(gatewayPid) : false;
     const fuseAlive = fusePid ? isAlive(fusePid) : false;
@@ -384,4 +418,4 @@ function isAlive(pid) {
   }
 }
 
-module.exports = { run, validateConfig, prepareDir, waitForReady, EXIT };
+module.exports = { run, validateConfig, prepareDir, waitForReady, buildChildEnv, EXIT };

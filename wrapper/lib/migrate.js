@@ -1,6 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+const { safeAtomicWriteFile } = require('./safe-fs');
+
 const MIGRATION = {
   markerName: '.ocpfs.migrated.json',
   inProgressName: '.ocpfs.migrating.json',
@@ -17,9 +19,7 @@ function isProbablyEmptyDir(dir, { allowNames = [] } = {}) {
 }
 
 function atomicWriteFile(filePath, data) {
-  const tmp = `${filePath}.tmp.${process.pid}.${Date.now()}`;
-  fs.writeFileSync(tmp, data, { mode: 0o600 });
-  fs.renameSync(tmp, filePath);
+  safeAtomicWriteFile(filePath, data, { mode: 0o600 });
 }
 
 function readJsonIfExists(p) {

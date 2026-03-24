@@ -22,10 +22,10 @@ This task is intentionally checklist-driven. Prefer changes that are low-risk, m
 ## Checklist / Acceptance criteria
 
 ### Wrapper
-- [ ] Ensure all filesystem writes use safe permissions (e.g. `0o600` for secret-ish markers; `0o700` for private dirs) and do not inherit overly-open umask defaults.
-- [ ] Ensure marker / socket / pidfile paths are validated and cannot be redirected via symlinks.
-- [ ] Ensure child process spawning uses explicit argv arrays (no shell) everywhere.
-- [ ] Ensure environment passed to child processes is minimal and explicit (no accidental leakage).
+- [x] Ensure all filesystem writes use safe permissions (e.g. `0o600` for secret-ish markers; `0o700` for private dirs) and do not inherit overly-open umask defaults.
+- [x] Ensure marker / socket / pidfile paths are validated and cannot be redirected via symlinks.
+- [x] Ensure child process spawning uses explicit argv arrays (no shell) everywhere.
+- [x] Ensure environment passed to child processes is minimal and explicit (no accidental leakage).
 - [ ] Ensure logs never print secrets / key material / unredacted paths that may contain usernames (keep practical; don’t over-sanitize).
 
 ### FUSE shim / core
@@ -34,18 +34,23 @@ This task is intentionally checklist-driven. Prefer changes that are low-risk, m
 - [ ] Ensure any temporary files are created safely (`mkdtemp`, no predictable names).
 
 ### Tests
-- [ ] Add unit tests for at least 2–3 hardening items above (permissions, symlink rejection, env minimization, etc.).
-- [ ] `make test` passes.
+- [x] Add unit tests for at least 2–3 hardening items above (permissions, symlink rejection, env minimization, etc.).
+- [x] `make test` passes.
 
 ### Docs / Notes
 - [ ] Document any security-relevant behavior changes briefly in the PR description.
 
-## Notes / Ideas
+## Notes / Implementation notes
 
-- Consider adding a helper like `safeWriteFileAtomic(path, data, {mode})` that:
-  - writes to a temp file in the same dir
-  - `fsync`s
-  - `rename`s into place
-  - rejects if target dir is a symlink
+Implemented:
 
-- Consider validating that backstore + mountpoint dirs are owned by the current user and not group/world-writable.
+- `wrapper/lib/safe-fs.js`:
+  - `safeAtomicWriteFile(path, data, {mode})` writes via a random, `open('wx')`-created temp file + `fsync` + `rename`, then `chmod`s to avoid umask widening.
+  - Refuses symlink path components and refuses writing to an existing symlink leaf.
+- `wrapper/lib/migrate.js` now uses `safeAtomicWriteFile` for `.ocpfs.migrating.json` / `.ocpfs.migrated.json` markers.
+- `wrapper/lib/run.js` now uses `buildChildEnv()` to pass a small allow-listed environment + `OCPROTECTFS_LIVENESS_SOCK` to child processes.
+
+Still open / follow-ups:
+
+- Logging hygiene is mostly OK today (no key material is logged), but we still log mountpoint/backstore paths and legacy migration destination paths. Decide whether to redact or keep as-is for operability.
+- FUSE core is still a skeleton; deny-by-default and path normalization checks should be revisited when real ops are implemented.
