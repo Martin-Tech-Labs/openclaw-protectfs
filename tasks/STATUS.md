@@ -3,7 +3,7 @@
 ## Current (PLAN)
 - Plan task: PLAN 11 — Wrapper best-effort unmount
 - Focus: attempt best-effort unmount on shutdown; add regression test
-- Status: in progress.
+- Status: PR opened (#30).
 
 ## Done / mostly done
 - PLAN 00-design: done (PR #2)
