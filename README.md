@@ -2,6 +2,9 @@
 
 macFUSE-based protective filesystem overlay for OpenClaw on macOS.
 
+## Status
+- **V1: COMPLETE** (see `tasks/STATUS.md` for the canonical tracker)
+
 ## What problem this solves
 OpenClaw stores sensitive data under `~/.openclaw` (sessions, profiles, internal state). Tools and other same-user processes can often read those files.
 
