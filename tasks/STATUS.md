@@ -1,9 +1,9 @@
 # STATUS
 
 ## Current (PLAN)
-- Plan task: (TBD)
-- Focus: pick next planned task
-- Status: needs planning.
+- Plan task: PLAN 10 — Wrapper test hygiene (lifecycle)
+- Focus: fix lifecycle test output capture option typo (`captureLabel` -> `capture`)
+- Status: in progress.
 
 ## Done / mostly done
 - PLAN 00-design: done (PR #2)
