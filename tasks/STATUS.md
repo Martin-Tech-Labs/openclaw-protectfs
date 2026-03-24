@@ -3,6 +3,7 @@
 ## Current (PLAN)
 - Plan task: 04-policy
 - Focus: enforce path policy + access checks in code; document limitations.
+- Status: path classification module + unit tests done; FUSE enforcement still pending.
 
 ## Done / mostly done
 - PLAN 00-design: done (PR #2)
