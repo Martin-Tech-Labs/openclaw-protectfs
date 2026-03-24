@@ -1,9 +1,9 @@
 # STATUS
 
 ## Current (PLAN)
-- Plan task: PLAN 11 — Wrapper best-effort unmount
-- Focus: attempt best-effort unmount on shutdown; add regression test
-- Status: PR opened (#30).
+- Plan task: (TBD)
+- Focus: pick next planned task
+- Status: needs planning.
 
 ## Done / mostly done
 - PLAN 00-design: done (PR #2)
@@ -18,6 +18,7 @@
 - PLAN 08-wrapper-lifecycle-docs-tests: done (PR #26)
 - PLAN 09-fusefs-core-acceptance-tests: done (PR #25)
 - PLAN 10-wrapper-test-hygiene: done (PR #28)
+- PLAN 11-wrapper-unmount: done (PR #30)
 - LEGACY 05-fail-closed-ready: done (PR #10)
 
 ## Next (PLAN)
