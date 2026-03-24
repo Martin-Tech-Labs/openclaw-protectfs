@@ -18,6 +18,60 @@ function log(msg) {
   process.stderr.write(`${ts} ${msg}\n`);
 }
 
+function teeChildOutput(child, name) {
+  // Mirror child output to our stderr so users still see logs, while allowing
+  // the wrapper to also inspect stdout/stderr for readiness signals.
+  if (child.stdout) child.stdout.on('data', (d) => process.stderr.write(`[${name}:stdout] ${d}`));
+  if (child.stderr) child.stderr.on('data', (d) => process.stderr.write(`[${name}:stderr] ${d}`));
+}
+
+async function waitForReady(child, opts) {
+  const timeoutMs = opts && Number.isFinite(opts.timeoutMs) ? opts.timeoutMs : 2000;
+  const needle = (opts && opts.line) || 'READY';
+
+  const start = Date.now();
+  return await new Promise((resolve) => {
+    let bufOut = '';
+    let bufErr = '';
+
+    const tryConsume = (which, chunk) => {
+      const s = chunk.toString('utf8');
+      if (which === 'out') bufOut += s;
+      else bufErr += s;
+
+      const combined = bufOut + '\n' + bufErr;
+      if (combined.includes(needle)) {
+        cleanup();
+        resolve({ ok: true, ms: Date.now() - start });
+      }
+    };
+
+    const onExit = () => {
+      cleanup();
+      resolve({ ok: false, reason: 'exited', ms: Date.now() - start });
+    };
+
+    const timer = setTimeout(() => {
+      cleanup();
+      resolve({ ok: false, reason: 'timeout', ms: Date.now() - start });
+    }, timeoutMs);
+
+    const cleanup = () => {
+      clearTimeout(timer);
+      if (child.stdout) child.stdout.off('data', onOut);
+      if (child.stderr) child.stderr.off('data', onErr);
+      child.off('exit', onExit);
+    };
+
+    const onOut = (d) => tryConsume('out', d);
+    const onErr = (d) => tryConsume('err', d);
+
+    if (child.stdout) child.stdout.on('data', onOut);
+    if (child.stderr) child.stderr.on('data', onErr);
+    child.once('exit', onExit);
+  });
+}
+
 function validateConfig(cfg) {
   if (!cfg) throw new Error('config missing');
   if (!cfg.backstore || !cfg.mountpoint) throw new Error('backstore and mountpoint must be set');
@@ -58,15 +112,19 @@ async function run(cfg) {
     return EXIT.PREPARE_FS;
   }
 
-  const fuse = spawn(cfg.fuseBin, cfg.fuseArgs, { stdio: 'inherit', detached: true });
+  const fuse = spawn(cfg.fuseBin, cfg.fuseArgs, { stdio: ['ignore', 'pipe', 'pipe'], detached: true });
   fuse.unref();
+  teeChildOutput(fuse, 'fuse');
   log(`starting fuse: ${cfg.fuseBin} ${cfg.fuseArgs.join(' ')}`);
 
   if (!fuse.pid) return EXIT.FUSE_START;
   log(`fuse started pid=${fuse.pid}`);
 
-  // In later tasks, wait for actual mount readiness.
-  await sleep(150);
+  // Rudimentary readiness detection (Task 03): proceed once the fuse process
+  // prints a READY line, or after a short timeout for legacy placeholders.
+  const ready = await waitForReady(fuse, { timeoutMs: 2000, line: 'READY' });
+  if (ready.ok) log(`fuse reported ready after ${ready.ms}ms`);
+  else log(`fuse readiness not detected (${ready.reason}); continuing`);
 
   const gateway = spawn(cfg.gatewayBin, cfg.gatewayArgs, { stdio: 'inherit', detached: true });
   gateway.unref();
@@ -160,4 +218,4 @@ function isAlive(pid) {
   }
 }
 
-module.exports = { run, validateConfig, prepareDir, EXIT };
+module.exports = { run, validateConfig, prepareDir, waitForReady, EXIT };
