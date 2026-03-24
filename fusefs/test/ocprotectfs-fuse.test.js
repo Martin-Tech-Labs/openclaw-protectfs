@@ -7,6 +7,23 @@ const os = require('node:os');
 
 const FUSE_BIN = path.join(__dirname, '..', 'ocprotectfs-fuse.js');
 
+function canAttemptRealMount() {
+  if (process.platform !== 'darwin') return false;
+
+  // Heuristic: presence of macFUSE install.
+  if (!fs.existsSync('/Library/Filesystems/macfuse.fs') && !fs.existsSync('/Library/Filesystems/osxfuse.fs')) return false;
+
+  try {
+    // Optional dependency: may not be installed in CI.
+    // eslint-disable-next-line global-require
+    require('fuse-native');
+  } catch {
+    return false;
+  }
+
+  return true;
+}
+
 test('ocprotectfs-fuse: --help exits 0', async () => {
   const p = spawn(process.execPath, [FUSE_BIN, '--help'], { stdio: ['ignore', 'pipe', 'pipe'] });
 
@@ -20,7 +37,12 @@ test('ocprotectfs-fuse: --help exits 0', async () => {
   assert.match(out.buf, /ocprotectfs-fuse/);
 });
 
-test('ocprotectfs-fuse: emits READY then stays alive until terminated', async () => {
+test('ocprotectfs-fuse: best-effort real mount passthrough (skipped in CI)', async (t) => {
+  if (!canAttemptRealMount()) {
+    t.skip('requires macOS + macFUSE + fuse-native');
+    return;
+  }
+
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'ocpfs-fuse-'));
   const backstore = path.join(base, 'backstore');
   const mountpoint = path.join(base, 'mountpoint');
@@ -31,26 +53,37 @@ test('ocprotectfs-fuse: emits READY then stays alive until terminated', async ()
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
-  const ready = await new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error('timeout waiting for READY')), 2000);
-    let buf = '';
-    p.stdout.on('data', (d) => {
-      buf += d.toString('utf8');
-      if (buf.includes('READY')) {
-        clearTimeout(t);
-        resolve(buf);
-      }
+  try {
+    await new Promise((resolve, reject) => {
+      const timeoutMs = 8000;
+      const tt = setTimeout(() => reject(new Error('timeout waiting for READY (mount)')), timeoutMs);
+      let buf = '';
+      p.stdout.on('data', (d) => {
+        buf += d.toString('utf8');
+        if (buf.includes('READY')) {
+          clearTimeout(tt);
+          resolve();
+        }
+      });
+      p.on('exit', (code) => {
+        if (code && code !== 0) {
+          clearTimeout(tt);
+          reject(new Error(`fuse process exited before READY (code=${code})`));
+        }
+      });
     });
-  });
 
-  assert.match(ready, /READY/);
+    // Minimal passthrough check: write via mountpoint, read from backstore.
+    const rel = 'hello.txt';
+    const mountFile = path.join(mountpoint, rel);
+    const backFile = path.join(backstore, rel);
 
-  // terminate cleanly
-  p.kill('SIGTERM');
-  const out = await new Promise((resolve) => p.on('close', (code, signal) => resolve({ code, signal })));
-
-  // On some platforms/node versions, processes terminated via SIGTERM report
-  // `code === null` and `signal === 'SIGTERM'` even if they perform a clean
-  // shutdown. Accept either form.
-  assert.ok(out.code === 0 || out.signal === 'SIGTERM');
+    fs.writeFileSync(mountFile, 'hi from fuse');
+    const back = fs.readFileSync(backFile, 'utf8');
+    assert.equal(back, 'hi from fuse');
+  } finally {
+    // terminate cleanly
+    p.kill('SIGTERM');
+    await new Promise((resolve) => p.on('close', () => resolve()));
+  }
 });

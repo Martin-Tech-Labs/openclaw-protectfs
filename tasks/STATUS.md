@@ -1,12 +1,13 @@
 # STATUS
 
 ## Current (PLAN)
-- Plan task: **Task 12 — macFUSE integration (spike + plan)**
-- Focus: pick a concrete implementation strategy for a real macFUSE mount and define follow-up implementation steps.
-- Status: planning in progress (this PR).
+- Implementation task: **Task 13 — minimal macFUSE passthrough mount (fuse-native)**
+- Focus: replace placeholder FUSE process with real passthrough mount; print `READY` only after mount.
+- Status: in progress.
 
 ## Done / mostly done
 - PLAN 00-design: done (PR #2)
+- PLAN 12-macfuse-integration: done (plan + decision)
 - PLAN 01-wrapper: mostly done (PR #3, #4)
   - gaps: document clean shutdown/unmount behavior; ensure wrapper owns mount lifecycle; add tests around lifecycle.
 - PLAN 02-fusefs-core: mostly done (PR #6)
@@ -22,7 +23,7 @@
 - LEGACY 05-fail-closed-ready: done (PR #10)
 
 ## Next (PLAN)
-- Task 13 (follow-up to Task 12): implement a minimal macFUSE passthrough mount using `fuse-native` that prints `READY` only after mount.
+- After Task 13: wire in `core-v1` authorization + `crypto-v1` encrypted-at-rest behavior.
 
 ## Definition of Done (per PR)
 For non-trivial PRs:
