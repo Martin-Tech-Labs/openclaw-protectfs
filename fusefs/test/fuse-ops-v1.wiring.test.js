@@ -193,9 +193,17 @@ test('fuse-ops-v1 wiring: chmod/utimens/statfs are wired for plaintext workspace
   const chmodCode = await pChmod(ops, '/workspace/meta.txt', 0o600);
   assert.equal(chmodCode, 0);
 
+  // Exercise utimens with both Date and timespec-like objects (as fuse-native may pass).
   const t = new Date('2020-01-02T03:04:05Z');
-  const utCode = await pUtimens(ops, '/workspace/meta.txt', t, t);
-  assert.equal(utCode, 0);
+  const utCode1 = await pUtimens(ops, '/workspace/meta.txt', t, t);
+  assert.equal(utCode1, 0);
+
+  const ts = {
+    tv_sec: Math.floor(t.getTime() / 1000),
+    tv_nsec: (t.getTime() % 1000) * 1e6,
+  };
+  const utCode2 = await pUtimens(ops, '/workspace/meta.txt', ts, ts);
+  assert.equal(utCode2, 0);
 
   const sfs = await pStatfs(ops, '/workspace');
   assert.equal(sfs.code, 0);

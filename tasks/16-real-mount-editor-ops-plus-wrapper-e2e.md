@@ -25,10 +25,17 @@ Finally, document **local macFUSE prerequisites** so contributors can run the be
 - Add local prerequisites doc under `docs/`
 
 ## Acceptance criteria
-- [ ] `npm test` passes in CI (real-mount tests are skipped when prerequisites are missing)
-- [ ] On a local macOS machine with macFUSE + `fuse-native`, the real-mount suite runs and covers chmod/utimens/fsync/statfs
-- [ ] Wrapper e2e test proves: wrapper starts fuse, detects READY, and workspace passthrough works end-to-end
-- [ ] Local macFUSE prerequisites are documented and linked from README
+- [x] `npm test` passes in CI (real-mount tests are skipped when prerequisites are missing)
+- [x] On a local macOS machine with macFUSE + `fuse-native`, the real-mount suite runs and covers chmod/utimens/fsync/statfs
+- [x] Wrapper e2e test proves: wrapper starts fuse, detects READY, and workspace passthrough works end-to-end
+- [x] Local macFUSE prerequisites are documented and linked from README
+
+## Implementation notes
+- Implemented ops in `fusefs/lib/fuse-ops-v1.js`: `chmod`, `utimens`, `fsync`, `statfs`.
+- Hardened `utimens` to accept both `Date` values and timespec-like objects (`{tv_sec,tv_nsec}`), which `fuse-native` may supply.
+- Real-mount coverage lives in `fusefs/test/ocprotectfs-fuse.test.js` (best-effort + skipped without prerequisites).
+- Wrapper-integrated e2e coverage lives in `wrapper/test/e2e-real-mount.test.js` (best-effort + skipped without prerequisites).
+- Local prerequisites documented in `docs/local-macfuse.md` and linked from the repo README.
 
 ## Notes / risks
 - `fsync` and `statfs` behavior can vary by filesystem; keep assertions minimal (e.g., statfs bsize > 0).

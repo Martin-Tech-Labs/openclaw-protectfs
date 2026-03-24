@@ -402,15 +402,54 @@ function makeFuseOps({ backstore, Fuse, gatewayAccessAllowed, kek }) {
       const real = rp(p, cb);
       if (!real) return;
 
+      // fuse-native may pass Dates *or* timespec-like objects.
+      // Node's fs.utimes accepts Date or number.
+      const toUtime = (x) => {
+        if (x == null) return new Date(0);
+        if (x instanceof Date) return x;
+        if (typeof x === 'number') return x;
+
+        // timespec-like: { tv_sec, tv_nsec }
+        if (typeof x === 'object') {
+          const sec =
+            typeof x.tv_sec === 'number'
+              ? x.tv_sec
+              : typeof x.sec === 'number'
+                ? x.sec
+                : typeof x.seconds === 'number'
+                  ? x.seconds
+                  : null;
+
+          const nsec =
+            typeof x.tv_nsec === 'number'
+              ? x.tv_nsec
+              : typeof x.nsec === 'number'
+                ? x.nsec
+                : typeof x.nanoseconds === 'number'
+                  ? x.nanoseconds
+                  : 0;
+
+          if (typeof sec === 'number') {
+            return new Date(sec * 1000 + nsec / 1e6);
+          }
+        }
+
+        // last resort: let fs handle / throw
+        return x;
+      };
+
+      const a = toUtime(atime);
+      const m = toUtime(mtime);
+
       const finish = (err) => {
         if (err) return cb(errnoCode(err, Fuse));
         return cb(0);
       };
 
-      fs.utimes(real, atime, mtime, (err) => {
+      fs.utimes(real, a, m, (err) => {
         if (err) return finish(err);
         if (cls.storage === 'encrypted') {
-          fs.utimes(sidecarDekPath(real), atime, mtime, (e2) => {
+          fs.utimes(sidecarDekPath(real), a, m, (e2) => {
             if (e2 && e2.code !== 'ENOENT') return finish(e2);
             return finish(null);
           });
