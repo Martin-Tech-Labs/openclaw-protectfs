@@ -1,9 +1,9 @@
 # STATUS
 
 ## Current (PLAN)
-- Plan task: (TBD)
-- Focus: pick next planned task
-- Status: needs planning.
+- Plan task: PLAN 11 — Wrapper best-effort unmount
+- Focus: attempt best-effort unmount on shutdown; add regression test
+- Status: in progress.
 
 ## Done / mostly done
 - PLAN 00-design: done (PR #2)

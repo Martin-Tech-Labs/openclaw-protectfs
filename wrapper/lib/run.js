@@ -288,7 +288,7 @@ async function run(cfg) {
         // deterministic under heavy load and tiny readiness timeouts.
         await sleep(100);
 
-        await shutdownBoth(fuse.pid, null, cfg.shutdownTimeoutMs);
+        await shutdownBoth({ fusePid: fuse.pid, gatewayPid: null, timeoutMs: cfg.shutdownTimeoutMs, mountpoint: cfg.mountpoint });
       } catch (e) {
         // Best-effort: failing closed should still return a stable exit code
         // even if teardown times out.
@@ -304,13 +304,13 @@ async function run(cfg) {
   gateway.unref();
   log(`starting gateway: ${cfg.gatewayBin} ${cfg.gatewayArgs.join(' ')}`);
   if (!gateway.pid) {
-    await shutdownBoth(fuse.pid, null, cfg.shutdownTimeoutMs);
+    await shutdownBoth({ fusePid: fuse.pid, gatewayPid: null, timeoutMs: cfg.shutdownTimeoutMs, mountpoint: cfg.mountpoint });
     await liveness.close();
     return EXIT.GATEWAY_START;
   }
   log(`gateway started pid=${gateway.pid}`);
 
-  const code = await supervise(fuse, gateway, cfg.shutdownTimeoutMs, liveness);
+  const code = await supervise(fuse, gateway, cfg.shutdownTimeoutMs, liveness, cfg.mountpoint);
   await liveness.close();
   return code;
 }
@@ -319,7 +319,7 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function supervise(fuse, gateway, timeoutMs, liveness) {
+async function supervise(fuse, gateway, timeoutMs, liveness, mountpoint) {
   let done = false;
 
   const onSignal = async (sig) => {
@@ -327,7 +327,7 @@ async function supervise(fuse, gateway, timeoutMs, liveness) {
     done = true;
     log(`signal ${sig} received; shutting down`);
     try {
-      await shutdownBoth(fuse.pid, gateway.pid, timeoutMs);
+      await shutdownBoth({ fusePid: fuse.pid, gatewayPid: gateway.pid, timeoutMs, mountpoint });
       if (liveness) await liveness.close();
       process.exit(EXIT.OK);
     } catch (e) {
@@ -348,7 +348,7 @@ async function supervise(fuse, gateway, timeoutMs, liveness) {
   done = true;
 
   log(`${first.name} exited (code=${first.code}); shutting down`);
-  await shutdownBoth(fuse.pid, gateway.pid, timeoutMs);
+  await shutdownBoth({ fusePid: fuse.pid, gatewayPid: gateway.pid, timeoutMs, mountpoint });
   if (liveness) await liveness.close();
   return first.name === 'fuse' ? EXIT.FUSE_DIED : EXIT.GATEWAY_DIED;
 }
@@ -368,10 +368,15 @@ function onceExit(child, name) {
   });
 }
 
-async function shutdownBoth(fusePid, gatewayPid, timeoutMs) {
-  // TODO (Task 03+): unmount mountpoint cleanly.
+async function shutdownBoth({ fusePid, gatewayPid, timeoutMs, mountpoint }) {
+  // On shutdown, try to terminate processes first (so the FUSE daemon can
+  // unmount itself), then do a best-effort unmount as a cleanup step.
   if (gatewayPid) terminateProcessGroup(gatewayPid, 'SIGTERM');
   if (fusePid) terminateProcessGroup(fusePid, 'SIGTERM');
+
+  // Best-effort unmount early, so even if we crash/exit unexpectedly during the
+  // wait loop we still attempted cleanup.
+  await bestEffortUnmount(mountpoint);
 
   // Hardening: if callers configure an extremely small timeout, still allow a
   // minimal grace period before escalating to SIGKILL. The polling interval is
@@ -389,6 +394,47 @@ async function shutdownBoth(fusePid, gatewayPid, timeoutMs) {
   if (gatewayPid) terminateProcessGroup(gatewayPid, 'SIGKILL');
   if (fusePid) terminateProcessGroup(fusePid, 'SIGKILL');
   throw new Error('timeout waiting for children to exit');
+}
+
+async function bestEffortUnmount(mountpoint) {
+  if (!mountpoint) return;
+
+  // If the mountpoint doesn't exist, there's nothing to do.
+  try {
+    if (!fs.existsSync(mountpoint)) return;
+  } catch (_) {
+    return;
+  }
+
+  // Try a small set of commands; ignore failures.
+  // - macOS: `umount` exists; `umount -f` can help if busy.
+  // - Linux: prefer `fusermount -u` when available, then fall back to `umount`.
+  const cmds = [];
+  if (process.platform === 'linux') {
+    cmds.push(['fusermount', ['-u', mountpoint]]);
+    cmds.push(['umount', [mountpoint]]);
+  } else if (process.platform === 'darwin') {
+    cmds.push(['umount', [mountpoint]]);
+    cmds.push(['umount', ['-f', mountpoint]]);
+  } else {
+    cmds.push(['umount', [mountpoint]]);
+  }
+
+  for (const [bin, args] of cmds) {
+    try {
+      log(`unmount cmd: ${bin} ${args.join(' ')}`);
+      const res = await new Promise((resolve) => {
+        const p = spawn(bin, args, { stdio: 'ignore' });
+        p.once('error', () => resolve({ ok: false, reason: 'spawn-error' }));
+        p.once('exit', (code) => resolve({ ok: code === 0, code: Number.isFinite(code) ? code : null }));
+      });
+
+      if (res.ok) return;
+      // If the command ran but failed (non-zero), try the next option.
+    } catch (_) {
+      // continue
+    }
+  }
 }
 
 function terminateProcessGroup(pid, sig) {
