@@ -4,6 +4,8 @@
 - (none)
 
 ## Done / mostly done
+- PLAN 17-readme-operator-guide: operator README/diagrams for install/run/secrets
+
 - Task 16: expand real-mount editor-ops coverage (chmod/utimens/fsync/statfs), add wrapper-integrated end-to-end test, and document local macFUSE prerequisites.
   - See: `tasks/16-real-mount-editor-ops-plus-wrapper-e2e.md`
 
@@ -37,4 +39,3 @@ For non-trivial PRs:
 
 
 ## Added tasks
-- PLAN 17-readme-operator-guide: add operator README/diagrams for install/run/secrets
