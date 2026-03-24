@@ -1,8 +1,8 @@
 # STATUS
 
 ## Current (PLAN)
-- Implementation task: **Task 14 — core-v1 authorization + crypto-v1 encrypted-at-rest wiring**
-- Focus: enforce gateway authorization + encryption for non-workspace paths end-to-end (mount -> FUSE ops -> policy).
+- Implementation task: **Real macFUSE acceptance tests**
+- Focus: best-effort end-to-end mount on macOS + verify encrypted-at-rest in backstore.
 - Status: not started.
 
 ## Done / mostly done
@@ -24,7 +24,7 @@
 - LEGACY 05-fail-closed-ready: done (PR #10)
 
 ## Next (PLAN)
-- After Task 14: acceptance tests against a real macFUSE mount (best-effort) + coverage for common editor ops.
+- (none)
 
 ## Definition of Done (per PR)
 For non-trivial PRs:
