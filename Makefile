@@ -1,10 +1,10 @@
 .PHONY: test lint fmt
 
 test:
-	@echo "(placeholder) add tests in later tasks"
+	npm test
 
 lint:
-	@echo "(placeholder)"
+	@echo "(placeholder) add eslint in later tasks"
 
 fmt:
-	@echo "(placeholder)"
+	@echo "(placeholder) add prettier in later tasks"
