@@ -56,19 +56,19 @@ If shutdown times out, wrapper exits with `EXIT.SHUTDOWN`.
 
 ## Unmount behavior (important)
 
-The wrapper currently **does not** invoke `umount` / `diskutil unmount` itself.
+On shutdown the wrapper performs a **best-effort unmount** of the mountpoint.
 
-- Clean unmount is expected to happen as part of the FUSE process’s own SIGTERM/SIGINT handling.
-- There is an explicit TODO in `wrapper/lib/run.js`:
-  - `// TODO (Task 03+): unmount mountpoint cleanly.`
+- First it terminates the gateway + FUSE process groups (SIGTERM → SIGKILL escalation).
+- Then it invokes an unmount command (platform-dependent) and **ignores failures**.
+  - macOS: `umount <mountpoint>` (and `umount -f` as a fallback)
+  - Linux: `fusermount -u <mountpoint>` (and `umount <mountpoint>` as a fallback)
 
-This keeps the wrapper conservative: it focuses on process supervision and fail-closed behavior, and avoids making assumptions about unmount mechanics across macFUSE versions.
+Rationale: the FUSE daemon should normally unmount itself on SIGTERM/SIGINT, but a conservative best-effort unmount helps avoid leaving a stale mount behind.
 
 ## Known limitations / TODOs
 
-- Wrapper does **not** invoke `umount` / `diskutil unmount` today; it relies on the FUSE daemon to unmount itself on shutdown.
+- Unmount is best-effort only: the wrapper does not currently verify that the mount is actually gone (it avoids parsing `mount` output across platforms).
 - Wrapper currently expects FUSE readiness to be signaled by a `READY` line; if this contract changes, `--require-fuse-ready` will need updates.
-- Future work (out of scope for this task): wrapper-owned mount/unmount lifecycle management (see TODO in `wrapper/lib/run.js`).
 
 ## Tests
 

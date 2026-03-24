@@ -46,7 +46,7 @@ async function waitForFile(p, { timeoutMs = 2000, proc, capture } = {}) {
   throw new Error(`timeout waiting for file: ${p}${label ? `\n${label}` : ''}`);
 }
 
-function spawnWrapper({ cwd, backstore, mountpoint, fuseScript, gatewayScript, shutdownTimeoutMs = 1000 }) {
+function spawnWrapper({ cwd, backstore, mountpoint, fuseScript, gatewayScript, shutdownTimeoutMs = 1000, env = {} }) {
   const wrapperBin = path.join(__dirname, '..', 'ocprotectfs.js');
   const args = [
     wrapperBin,
@@ -72,6 +72,7 @@ function spawnWrapper({ cwd, backstore, mountpoint, fuseScript, gatewayScript, s
   return spawn(process.execPath, args, {
     cwd,
     stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, ...env },
   });
 }
 
@@ -377,3 +378,72 @@ test('wrapper lifecycle: gateway exit triggers fuse shutdown (EXIT.GATEWAY_DIED)
     }
   }
 });
+
+test('wrapper lifecycle: best-effort unmount invoked on shutdown', async () => {
+  // Keep paths short: unix socket paths have small length limits on macOS.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'o-'));
+  const backstore = path.join(dir, 'b');
+  const mountpoint = path.join(dir, 'm');
+
+  // Put the fake binary under the repo (not os.tmpdir) to avoid noexec mounts
+  // on some macOS setups.
+  const binDir = fs.mkdtempSync(path.join(__dirname, 'bin-'));
+
+  // Fake `umount` on PATH so we can assert the wrapper attempted cleanup.
+  const umountBin = path.join(binDir, 'umount');
+  fs.writeFileSync(umountBin, ['#!/bin/sh', 'exit 0'].join('\n'), { mode: 0o755 });
+
+  const fuseScript = path.join(dir, 'fuse.js');
+  fs.writeFileSync(
+    fuseScript,
+    ['console.log("READY");', 'setInterval(() => {}, 1000);'].join('\n'),
+  );
+
+  const gatewayScript = path.join(dir, 'gateway.js');
+  fs.writeFileSync(gatewayScript, ['setInterval(() => {}, 1000);'].join('\n'));
+
+  const wrapper = spawnWrapper({
+    cwd: dir,
+    backstore,
+    mountpoint,
+    fuseScript,
+    gatewayScript,
+    shutdownTimeoutMs: 1500,
+    env: {
+      PATH: `${binDir}`,
+    },
+  });
+
+  let buf = '';
+  if (wrapper.stderr) wrapper.stderr.on('data', (d) => (buf += d.toString('utf8')));
+  if (wrapper.stdout) wrapper.stdout.on('data', (d) => (buf += d.toString('utf8')));
+
+  try {
+    // Wait until the wrapper has completed its early setup (mountpoint exists,
+    // liveness socket created) so shutdown triggers unmount logic.
+    await waitForFile(path.join(mountpoint, '.ocpfs.sock'), { proc: wrapper });
+
+    // Give the wrapper a moment to attach SIGTERM/SIGINT handlers in supervise().
+    await sleep(100);
+
+    wrapper.kill('SIGTERM');
+
+    const exit = await new Promise((resolve) => wrapper.once('exit', (code, signal) => resolve({ code, signal })));
+    assert.equal(exit.signal, null);
+    assert.equal(exit.code, EXIT.OK);
+
+    assert.match(buf, /unmount cmd: umount/, `expected wrapper to attempt umount on shutdown; output was:\n${buf}`);
+  } finally {
+    try {
+      wrapper.kill('SIGKILL');
+    } catch (_) {
+      // ignore
+    }
+    try {
+      fs.rmSync(binDir, { recursive: true, force: true });
+    } catch (_) {
+      // ignore
+    }
+  }
+});
+
