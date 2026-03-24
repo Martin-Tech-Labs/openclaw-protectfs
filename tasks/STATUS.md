@@ -1,9 +1,9 @@
 # STATUS
 
 ## Current (PLAN)
-- Plan task: 08-wrapper-lifecycle-docs-tests
-- Focus: document wrapper lifecycle + mount/unmount expectations; add a small missing lifecycle test.
-- Status: in progress.
+- Plan task: 09-fusefs-core-acceptance-tests
+- Focus: add higher-level acceptance tests for allow/deny behavior in the FUSE core.
+- Status: starting.
 
 ## Done / mostly done
 - PLAN 00-design: done (PR #2)
@@ -18,8 +18,7 @@
 - LEGACY 05-fail-closed-ready: done (PR #10)
 
 ## Next (PLAN)
-- 08-wrapper-lifecycle-docs-tests
-- (then) 02-fusefs-core acceptance tests
+- 09-fusefs-core-acceptance-tests
 
 ## Definition of Done (per PR)
 For non-trivial PRs:
