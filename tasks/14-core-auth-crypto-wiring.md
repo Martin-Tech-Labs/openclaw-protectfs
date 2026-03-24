@@ -33,6 +33,10 @@ Wire the existing `core-v1` (authorization checks) and `crypto-v1` (encrypted-at
 
 ## Acceptance criteria
 - [ ] `npm test` passes
+- [ ] Unit tests cover wiring for:
+  - plaintext passthrough for `workspace/**` without gateway
+  - fail-closed deny for encrypted paths without gateway
+  - encrypted-at-rest behavior when gateway + KEK are present (ciphertext on disk + DEK sidecar)
 - [ ] Encrypted paths are unreadable in the backstore (ciphertext on disk)
 - [ ] Gateway authorization is required for encrypted paths; missing gateway -> deny (fail closed)
 - [ ] Plaintext workspace paths remain usable without gateway

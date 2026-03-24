@@ -37,7 +37,7 @@ test('ocprotectfs-fuse: --help exits 0', async () => {
   assert.match(out.buf, /ocprotectfs-fuse/);
 });
 
-test('ocprotectfs-fuse: best-effort real mount passthrough (skipped in CI)', async (t) => {
+test('ocprotectfs-fuse: best-effort real mount passthrough + fail-closed (skipped in CI)', async (t) => {
   if (!canAttemptRealMount()) {
     t.skip('requires macOS + macFUSE + fuse-native');
     return;
@@ -91,6 +91,72 @@ test('ocprotectfs-fuse: best-effort real mount passthrough (skipped in CI)', asy
     assert.throws(() => fs.writeFileSync(path.join(mountpoint, 'secret.txt'), 'nope'), /EACCES|operation not permitted/i);
   } finally {
     // terminate cleanly
+    p.kill('SIGTERM');
+    await new Promise((resolve) => p.on('close', () => resolve()));
+  }
+});
+
+test('ocprotectfs-fuse: best-effort real mount encrypted-at-rest (skipped in CI)', async (t) => {
+  if (!canAttemptRealMount()) {
+    t.skip('requires macOS + macFUSE + fuse-native');
+    return;
+  }
+
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'ocpfs-fuse-'));
+  const backstore = path.join(base, 'backstore');
+  const mountpoint = path.join(base, 'mountpoint');
+  fs.mkdirSync(backstore);
+  fs.mkdirSync(mountpoint);
+
+  // 32-byte KEK, base64
+  const kek = Buffer.alloc(32, 7).toString('base64');
+
+  const p = spawn(process.execPath, [FUSE_BIN, '--backstore', backstore, '--mountpoint', mountpoint], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: {
+      ...process.env,
+      OCPROTECTFS_GATEWAY_ACCESS_ALLOWED: '1',
+      OCPROTECTFS_KEK_B64: kek,
+    },
+  });
+
+  try {
+    await new Promise((resolve, reject) => {
+      const timeoutMs = 8000;
+      const tt = setTimeout(() => reject(new Error('timeout waiting for READY (mount)')), timeoutMs);
+      let buf = '';
+      p.stdout.on('data', (d) => {
+        buf += d.toString('utf8');
+        if (buf.includes('READY')) {
+          clearTimeout(tt);
+          resolve();
+        }
+      });
+      p.on('exit', (code) => {
+        if (code && code !== 0) {
+          clearTimeout(tt);
+          reject(new Error(`fuse process exited before READY (code=${code})`));
+        }
+      });
+    });
+
+    const mountFile = path.join(mountpoint, 'secret.txt');
+    const backFile = path.join(backstore, 'secret.txt');
+    const dekFile = path.join(backstore, 'secret.txt.ocpfs.dek');
+
+    fs.writeFileSync(mountFile, 'super secret');
+
+    // ciphertext on disk
+    const back = fs.readFileSync(backFile);
+    const plaintext = Buffer.from('super secret');
+    if (back.includes(plaintext)) {
+      throw new Error('expected ciphertext not to contain plaintext');
+    }
+
+    // sidecar exists on disk but is hidden from mount
+    assert.ok(fs.existsSync(dekFile));
+    assert.throws(() => fs.readFileSync(path.join(mountpoint, 'secret.txt.ocpfs.dek')), /ENOENT|not found/i);
+  } finally {
     p.kill('SIGTERM');
     await new Promise((resolve) => p.on('close', () => resolve()));
   }
