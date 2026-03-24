@@ -49,8 +49,12 @@ class MacOSSecurityCliKeychain {
       const out = execFileSync(this.securityBin, ['find-generic-password', '-s', service, '-a', account, '-w'], {
         stdio: ['ignore', 'pipe', 'ignore'],
       });
-      // security prints UTF-8; we treat it as raw bytes.
-      return Buffer.from(out.toString('utf8'), 'utf8');
+
+      // Store arbitrary bytes as base64 text in Keychain.
+      const s = out.toString('utf8').trim();
+      const buf = Buffer.from(s, 'base64');
+      if (buf.length === 0 && s.length !== 0) throw new Error('keychain item is not valid base64');
+      return buf;
     } catch (e) {
       // If not found, security exits non-zero.
       return null;
@@ -62,9 +66,11 @@ class MacOSSecurityCliKeychain {
     if (!Buffer.isBuffer(secret)) throw new Error('secret must be a Buffer');
 
     // -U updates if exists.
+    // Write as base64 text so we can round-trip arbitrary bytes.
+    const encoded = secret.toString('base64');
     execFileSync(
       this.securityBin,
-      ['add-generic-password', '-U', '-s', service, '-a', account, '-w', secret.toString('utf8')],
+      ['add-generic-password', '-U', '-s', service, '-a', account, '-w', encoded],
       { stdio: ['ignore', 'ignore', 'ignore'] },
     );
   }
