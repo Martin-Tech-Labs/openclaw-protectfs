@@ -1,8 +1,7 @@
 # STATUS
 
 ## Current (PLAN)
-- Implementation task: **Real macFUSE acceptance tests**
-- Focus: best-effort end-to-end mount on macOS + verify encrypted-at-rest in backstore.
+- After Task 15: expand real-mount editor-ops coverage (chmod/utimens/fsync/statfs), add wrapper-integrated end-to-end test, and document local macFUSE prerequisites.
 - Status: not started.
 
 ## Done / mostly done
@@ -10,6 +9,7 @@
 - PLAN 12-macfuse-integration: done (plan + decision)
 - PLAN 13-macfuse-passthrough: done (PR #33)
 - PLAN 14-core-auth-crypto-wiring: done (PR #35)
+- PLAN 15-real-macfuse-acceptance-tests: implemented (real-mount tests are best-effort + skipped without prerequisites)
 - PLAN 01-wrapper: mostly done (PR #3, #4)
   - gaps: document clean shutdown/unmount behavior; ensure wrapper owns mount lifecycle; add tests around lifecycle.
 - PLAN 02-fusefs-core: mostly done (PR #6)
@@ -24,8 +24,6 @@
 - PLAN 11-wrapper-unmount: done (PR #30)
 - LEGACY 05-fail-closed-ready: done (PR #10)
 
-## Next (PLAN)
-- After Task 15: expand real-mount editor-ops coverage (chmod/utimens/fsync/statfs), add wrapper-integrated end-to-end test, and document local macFUSE prerequisites.
 
 ## Definition of Done (per PR)
 For non-trivial PRs:
