@@ -1,9 +1,9 @@
 # STATUS
 
 ## Current (PLAN)
-- Plan task: 08-wrapper-lifecycle-docs-tests
-- Focus: wrapper lifecycle docs + one missing lifecycle regression test.
-- Status: starting.
+- Plan task: (TBD)
+- Focus: pick next planned task
+- Status: needs planning.
 
 ## Done / mostly done
 - PLAN 00-design: done (PR #2)
@@ -15,7 +15,7 @@
 - PLAN 05-tests: done (PR #16)
 - PLAN 06-migration-mount: done (PR #18)
 - PLAN 07-hardening-owasp: done (PR #22)
-- PLAN 08-wrapper-lifecycle-docs-tests: starting
+- PLAN 08-wrapper-lifecycle-docs-tests: done (PR #26)
 - PLAN 09-fusefs-core-acceptance-tests: done (PR #25)
 - LEGACY 05-fail-closed-ready: done (PR #10)
 
