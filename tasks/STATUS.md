@@ -40,3 +40,7 @@ For non-trivial PRs:
 
 
 ## Added tasks
+
+
+## Next (added)
+- PLAN 19-keychain-kek-e2e: Keychain KEK end-to-end (no env), docs + tests
