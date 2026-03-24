@@ -1,14 +1,14 @@
 # STATUS
 
 ## Current
-- Task: 00-scaffold
-- PR: (pending)
+- Task: 01-design
+- PR: (open)
 - Review rounds: 0/2
 
 ## Next
-- 01-design
 - 02-wrapper-skeleton
 - 03-fusefs-skeleton
+- 04-encryption-impl
 
 ## Definition of Done (DoD)
 For non-trivial PRs:
