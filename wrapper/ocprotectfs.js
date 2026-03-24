@@ -18,6 +18,11 @@ function parseArgs(argv) {
     mountpoint: defaultMountpoint(),
     fuseBin: '/bin/sleep',
     fuseArgs: [],
+    // Fail-closed enforcement is opt-in for now so Task 02 placeholder
+    // workflows still work by default.
+    requireFuseReady: false,
+    fuseReadyTimeoutMs: 2000,
+
     gatewayBin: '/bin/sleep',
     gatewayArgs: [],
     shutdownTimeoutMs: 5000,
@@ -52,6 +57,14 @@ function parseArgs(argv) {
       case '--gateway-arg':
         cfg.gatewayArgs.push(next());
         break;
+
+      case '--require-fuse-ready':
+        cfg.requireFuseReady = true;
+        break;
+      case '--fuse-ready-timeout-ms':
+        cfg.fuseReadyTimeoutMs = Number(next());
+        break;
+
       case '--shutdown-timeout':
       case '--shutdown-timeout-ms':
         cfg.shutdownTimeoutMs = Number(next());
@@ -86,6 +99,9 @@ Flags:
 
   --gateway-bin <path>         Gateway binary (placeholder in Task 02)
   --gateway-arg <arg>          Gateway arg (repeatable)
+
+  --require-fuse-ready          Fail closed: require FUSE to report READY before starting gateway
+  --fuse-ready-timeout-ms <ms>  READY wait timeout (default 2000)
 
   --shutdown-timeout <ms>      Grace period for shutdown (default 5000)
   -h, --help                   Show help
