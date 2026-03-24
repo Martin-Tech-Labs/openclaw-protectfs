@@ -131,7 +131,13 @@ async function run(cfg) {
   } else {
     if (cfg.requireFuseReady) {
       log(`fuse readiness not detected (${ready.reason}); failing closed`);
-      await shutdownBoth(fuse.pid, null, cfg.shutdownTimeoutMs);
+      try {
+        await shutdownBoth(fuse.pid, null, cfg.shutdownTimeoutMs);
+      } catch (e) {
+        // Best-effort: failing closed should still return a stable exit code
+        // even if teardown times out.
+        log(`shutdown error while failing closed: ${e.message}`);
+      }
       return EXIT.FUSE_NOT_READY;
     }
     log(`fuse readiness not detected (${ready.reason}); continuing`);
