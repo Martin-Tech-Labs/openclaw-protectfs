@@ -16,10 +16,16 @@ This file is the canonical plan Martin expects to track readiness for v1.
 The repo started with a slightly different numbering. Map what is already done:
 
 - Repo Task 00-scaffold (PR #1): repository scaffold/CI (pre-plan setup)
+  - https://github.com/Martin-Tech-Labs/openclaw-protectfs/pull/1
 - Repo Task 01-design (PR #2): corresponds to **PLAN 00-design** (done)
+  - https://github.com/Martin-Tech-Labs/openclaw-protectfs/pull/2
 - Repo Task 02-wrapper-skeleton (PR #3, #4): corresponds to **PLAN 01-wrapper** (mostly done)
+  - https://github.com/Martin-Tech-Labs/openclaw-protectfs/pull/3
+  - https://github.com/Martin-Tech-Labs/openclaw-protectfs/pull/4
 - Repo Task 03-fusefs-skeleton (PR #6): corresponds to **PLAN 02-fusefs-core** (mostly done)
+  - https://github.com/Martin-Tech-Labs/openclaw-protectfs/pull/6
 - Repo Task 04-encryption-impl (PR #8): corresponds to **PLAN 03-encryption** (done)
+  - https://github.com/Martin-Tech-Labs/openclaw-protectfs/pull/8
 
 ## V1 ready — definition
 V1 is considered "ready" when:

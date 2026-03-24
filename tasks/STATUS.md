@@ -7,7 +7,9 @@
 ## Done / mostly done
 - PLAN 00-design: done (PR #2)
 - PLAN 01-wrapper: mostly done (PR #3, #4)
+  - gaps: document clean shutdown/unmount behavior; ensure wrapper owns mount lifecycle + liveness socket contract; add tests around lifecycle.
 - PLAN 02-fusefs-core: mostly done (PR #6)
+  - gaps: confirm full required ops for OpenClaw behavior; add acceptance tests around allow/deny behavior.
 - PLAN 03-encryption: done (PR #8)
 
 ## Next (PLAN)
