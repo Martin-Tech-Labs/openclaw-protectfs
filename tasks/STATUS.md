@@ -34,3 +34,7 @@ For non-trivial PRs:
 - [ ] `make test` (or equivalent) passes locally
 - [ ] Security notes for access-control / crypto changes
 - [ ] PR description includes: What/Why/How/Test Plan/Risks
+
+
+## Added tasks
+- PLAN 17-readme-operator-guide: add operator README/diagrams for install/run/secrets

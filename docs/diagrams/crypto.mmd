@@ -1,0 +1,6 @@
+flowchart LR
+  P[Plaintext file bytes] -->|encrypt with per-file DEK| C[Ciphertext file]
+  KEK[KEK (Keychain-derived)] -->|wrap/unwrap| DEK[DEK (per file)]
+  DEK -->|AEAD XChaCha20-Poly1305| C
+  C -->|decrypt| P
+  DEK --> S[Sidecar *.ocpfs.dek (wrapped DEK + metadata)]

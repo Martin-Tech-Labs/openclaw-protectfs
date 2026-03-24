@@ -41,3 +41,6 @@ V1 is considered "ready" when:
 - Test coverage exists (unit tests + mocked acceptance tests for key behaviors).
 - README documents usage + threat model + limitations.
 
+
+## Added tasks
+- PLAN 17-readme-operator-guide: README + diagrams + operator instructions
