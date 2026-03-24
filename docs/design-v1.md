@@ -21,7 +21,7 @@ A separate wrapper process is the root of trust:
 ### Out-of-scope / non-goals (v1)
 - Defending against root / kernel compromise.
 - Preventing exfiltration via the gateway itself (if gateway is compromised).
-- Perfect defense against PID reuse (we mitigate with wrapper lifetime + executable hash).
+- Perfect defense against PID reuse. Mitigation in v1: the wrapper owns the gateway lifetime; the FUSE daemon validates caller PID == recorded gateway PID AND re-hashes the resolved executable for that PID against the trusted SHA-256 on each sensitive access (with only a very short TTL cache).
 
 ## Directory layout
 - Mountpoint: `/Users/agent/.openclaw` (FUSE)
@@ -49,6 +49,14 @@ If gateway exits, wrapper unmounts (or flips FUSE to deny sensitive operations).
 
 ## FUSE daemon design
 ### Backstore mapping
+
+### Atomicity and crash safety
+For encrypted files, writes must be atomic to avoid partial ciphertext:
+- write to a temp file in the same directory
+- fsync (where supported)
+- atomic rename to the target path
+- best-effort fsync the parent directory
+
 All FUSE paths map 1:1 to backstore paths under `~/.openclaw.real`.
 
 ### Access control
@@ -67,14 +75,14 @@ To avoid TOCTOU overhead on every I/O, cache liveness result for a short TTL (e.
 
 ## Crypto
 ### Algorithm
-- AEAD: XChaCha20-Poly1305 (preferred) or AES-256-GCM.
+- AEAD (v1): XChaCha20-Poly1305 (24-byte nonce).
 
 ### File format (encrypted backstore)
 Each encrypted file stored in backstore contains:
 - magic bytes: `OCFS1` (5 bytes)
-- version: 1 byte
-- nonce: 24 bytes (for XChaCha20) / 12 bytes (for AES-GCM)
-- ciphertext (includes auth tag)
+- version: 1 byte (0x01)
+- nonce: 24 bytes (XChaCha20-Poly1305)
+- ciphertext+tag (as produced by the AEAD)
 
 Optional future fields: original size, header flags.
 
