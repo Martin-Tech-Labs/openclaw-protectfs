@@ -1,9 +1,9 @@
 # STATUS
 
 ## Current (PLAN)
-- Plan task: (TBD)
-- Focus: pick next planned task
-- Status: needs planning.
+- Plan task: **Task 12 — macFUSE integration (spike + plan)**
+- Focus: pick a concrete implementation strategy for a real macFUSE mount and define follow-up implementation steps.
+- Status: planning in progress (this PR).
 
 ## Done / mostly done
 - PLAN 00-design: done (PR #2)
@@ -22,7 +22,7 @@
 - LEGACY 05-fail-closed-ready: done (PR #10)
 
 ## Next (PLAN)
-- (TBD)
+- Implement Task 12 follow-up: choose a Node FUSE binding library and ship a minimal passthrough mount that prints `READY` only after mount.
 
 ## Definition of Done (per PR)
 For non-trivial PRs:
