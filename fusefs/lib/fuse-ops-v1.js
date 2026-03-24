@@ -369,6 +369,145 @@ function makeFuseOps({ backstore, Fuse, gatewayAccessAllowed, kek }) {
         .catch((e) => cb(errnoCode(e, Fuse)));
     },
 
+    chmod: (p, mode, cb) => {
+      const cls = authorizeFusePath(OPS.CHMOD, p, cb);
+      if (!cls) return;
+
+      const real = rp(p, cb);
+      if (!real) return;
+
+      const finish = (err) => {
+        if (err) return cb(errnoCode(err, Fuse));
+        return cb(0);
+      };
+
+      fs.chmod(real, mode, (err) => {
+        if (err) return finish(err);
+        if (cls.storage === 'encrypted') {
+          // Best-effort: keep DEK sidecar permissions in sync if it exists.
+          fs.chmod(sidecarDekPath(real), mode, (e2) => {
+            if (e2 && e2.code !== 'ENOENT') return finish(e2);
+            return finish(null);
+          });
+          return;
+        }
+        return finish(null);
+      });
+    },
+
+    utimens: (p, atime, mtime, cb) => {
+      const cls = authorizeFusePath(OPS.UTIMENS, p, cb);
+      if (!cls) return;
+
+      const real = rp(p, cb);
+      if (!real) return;
+
+      // fuse-native may pass Dates *or* timespec-like objects.
+      // Node's fs.utimes accepts Date or number.
+      const toUtime = (x) => {
+        if (x == null) return new Date(0);
+        if (x instanceof Date) return x;
+        if (typeof x === 'number') return x;
+
+        // timespec-like: { tv_sec, tv_nsec }
+        if (typeof x === 'object') {
+          const sec =
+            typeof x.tv_sec === 'number'
+              ? x.tv_sec
+              : typeof x.sec === 'number'
+                ? x.sec
+                : typeof x.seconds === 'number'
+                  ? x.seconds
+                  : null;
+
+          const nsec =
+            typeof x.tv_nsec === 'number'
+              ? x.tv_nsec
+              : typeof x.nsec === 'number'
+                ? x.nsec
+                : typeof x.nanoseconds === 'number'
+                  ? x.nanoseconds
+                  : 0;
+
+          if (typeof sec === 'number') {
+            return new Date(sec * 1000 + nsec / 1e6);
+          }
+        }
+
+        // last resort: let fs handle / throw
+        return x;
+      };
+
+      const a = toUtime(atime);
+      const m = toUtime(mtime);
+
+      const finish = (err) => {
+        if (err) return cb(errnoCode(err, Fuse));
+        return cb(0);
+      };
+
+      fs.utimes(real, a, m, (err) => {
+        if (err) return finish(err);
+        if (cls.storage === 'encrypted') {
+          fs.utimes(sidecarDekPath(real), a, m, (e2) => {
+            if (e2 && e2.code !== 'ENOENT') return finish(e2);
+            return finish(null);
+          });
+          return;
+        }
+        return finish(null);
+      });
+    },
+
+    fsync: (p, handle, datasync, cb) => {
+      const h = handles.get(handle);
+      if (!h) return cb(-Fuse.EBADF);
+
+      if (h.kind === 'plaintext') {
+        fs.fsync(h.fd, (err) => {
+          if (err) return cb(errnoCode(err, Fuse));
+          return cb(0);
+        });
+        return;
+      }
+
+      Promise.resolve()
+        .then(() => flushEncryptedHandle(h))
+        .then(() => {
+          // Best-effort: fsync ciphertext on disk as well.
+          try {
+            const fd = fs.openSync(h.real, 'r+');
+            try {
+              fs.fsyncSync(fd);
+            } finally {
+              fs.closeSync(fd);
+            }
+          } catch (_) {
+            // ignore
+          }
+        })
+        .then(() => cb(0))
+        .catch((e) => cb(errnoCode(e, Fuse)));
+    },
+
+    statfs: (p, cb) => {
+      const cls = authorizeFusePath(OPS.STATFS, p, cb);
+      if (!cls) return;
+
+      const real = rp(p, cb);
+      if (!real) return;
+
+      if (typeof fs.statfs !== 'function') {
+        // Shouldn't happen on modern Node, but be defensive.
+        return cb(-Fuse.EINVAL);
+      }
+
+      fs.statfs(real, (err, st) => {
+        if (err) return cb(errnoCode(err, Fuse));
+        return cb(0, st);
+      });
+    },
+
     init: (cb) => cb(0),
   };
 

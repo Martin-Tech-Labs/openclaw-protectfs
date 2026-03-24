@@ -56,6 +56,24 @@ function pReaddir(ops, p) {
   });
 }
 
+function pChmod(ops, p, mode) {
+  return new Promise((resolve) => {
+    ops.chmod(p, mode, (code) => resolve(code));
+  });
+}
+
+function pUtimens(ops, p, atime, mtime) {
+  return new Promise((resolve) => {
+    ops.utimens(p, atime, mtime, (code) => resolve(code));
+  });
+}
+
+function pStatfs(ops, p) {
+  return new Promise((resolve) => {
+    ops.statfs(p, (code, st) => resolve({ code, st }));
+  });
+}
+
 test('fuse-ops-v1 wiring: plaintext workspace is passthrough without gateway', async () => {
   const backstore = tmpDir();
 
@@ -154,4 +172,46 @@ test('fuse-ops-v1 wiring: encrypted paths write ciphertext + DEK sidecar, and re
   const rd = await pReaddir(ops, '/');
   assert.equal(rd.code, 0);
   assert.deepEqual(rd.entries.sort(), ['secret.txt']);
+});
+
+test('fuse-ops-v1 wiring: chmod/utimens/statfs are wired for plaintext workspace', async () => {
+  const backstore = tmpDir();
+
+  const { ops } = makeFuseOps({
+    backstore,
+    Fuse: FakeFuse,
+    gatewayAccessAllowed: false,
+    kek: null,
+  });
+
+  fs.mkdirSync(path.join(backstore, 'workspace'), { recursive: true });
+
+  const { code, handle } = await pCreate(ops, '/workspace/meta.txt');
+  assert.equal(code, 0);
+  await pWrite(ops, '/workspace/meta.txt', handle, 'x');
+
+  const chmodCode = await pChmod(ops, '/workspace/meta.txt', 0o600);
+  assert.equal(chmodCode, 0);
+
+  // Exercise utimens with both Date and timespec-like objects (as fuse-native may pass).
+  const t = new Date('2020-01-02T03:04:05Z');
+  const utCode1 = await pUtimens(ops, '/workspace/meta.txt', t, t);
+  assert.equal(utCode1, 0);
+
+  const ts = {
+    tv_sec: Math.floor(t.getTime() / 1000),
+    tv_nsec: (t.getTime() % 1000) * 1e6,
+  };
+  const utCode2 = await pUtimens(ops, '/workspace/meta.txt', ts, ts);
+  assert.equal(utCode2, 0);
+
+  const sfs = await pStatfs(ops, '/workspace');
+  assert.equal(sfs.code, 0);
+  assert.ok(sfs.st && typeof sfs.st.bsize === 'number');
+
+  await pRelease(ops, '/workspace/meta.txt', handle);
+
+  const st = fs.statSync(path.join(backstore, 'workspace', 'meta.txt'));
+  assert.equal(st.mode & 0o777, 0o600);
+  assert.ok(Math.abs(st.mtimeMs - t.getTime()) < 2000);
 });
