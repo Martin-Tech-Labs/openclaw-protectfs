@@ -59,14 +59,14 @@ flowchart TB
   end
 
   subgraph FS[Filesystem]
-    M[(mountpoint: ~/.openclaw)]
-    B[(backstore: ~/.openclaw.real)]
-    K[(Keychain item: KEK)]
+    M[mountpoint: ~/.openclaw]
+    B[backstore: ~/.openclaw.real]
+    K[Keychain item: KEK]
   end
 
   W -->|starts| F
   W -->|spawns| G
-  W -->|gets KEK (user presence)| K
+  W -->|gets KEK user presence| K
   W -->|passes KEK in-memory| F
 
   G -->|file ops| M
@@ -79,7 +79,7 @@ flowchart TB
 ```mermaid
 flowchart LR
   P[Plaintext file bytes] -->|encrypt with per-file DEK| C[Ciphertext file]
-  KEK[KEK (Keychain-derived)] -->|wrap/unwrap| DEK[DEK (per file)]
+  KEK[KEK Keychain-derived] -->|wrap/unwrap| DEK[DEK per file]
   DEK -->|AEAD XChaCha20-Poly1305| C
   C -->|decrypt| P
   DEK --> S[Sidecar: *.ocpfs.dek — wrapped DEK + metadata]
