@@ -22,7 +22,7 @@
 - LEGACY 05-fail-closed-ready: done (PR #10)
 
 ## Next (PLAN)
-- Implement Task 12 follow-up: choose a Node FUSE binding library and ship a minimal passthrough mount that prints `READY` only after mount.
+- Task 13 (follow-up to Task 12): implement a minimal macFUSE passthrough mount using `fuse-native` that prints `READY` only after mount.
 
 ## Definition of Done (per PR)
 For non-trivial PRs:

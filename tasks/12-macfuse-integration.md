@@ -41,9 +41,9 @@ Pros:
 
 Cons / unknowns:
 - macOS support quality varies by library
-- native build + headers needed (node-gyp)
+- native build + headers needed (node-gyp) unless prebuilds are shipped
 
-Candidate libraries to evaluate:
+Candidate libraries:
 - `fuse-native`
 - `fuse-bindings`
 
@@ -67,47 +67,119 @@ Pros:
 Cons:
 - does not satisfy the v1 readiness definition in `docs/design-v1.md`
 
-## Proposed approach
+## Spike report (decision)
 
-Proceed with **Option A** first.
+### Decision: use `fuse-native`
 
-Implement the FUSE daemon incrementally:
+Proceed with **Option A** using **`fuse-native`** as the binding.
 
-### Step 1: minimal passthrough mount
-- `fusefs/ocprotectfs-fuse.js` becomes a real mount (no crypto yet)
-- operations: getattr, readdir, open, read, write, create, rename, unlink, mkdir, rmdir
-- path mapping: `rel` → `${backstore}/${rel}`
-- print `READY` only after mount is complete
+Rationale:
+- Explicit macOS support (docs mention macOS options like `displayFolder` and OSXFUSE/macFUSE licensing).
+- N-API support (prebuilds are commonly shipped; reduces friction across Node versions).
+- API is a direct fit for this repo: a single Node process implements handlers and can call `core-v1` / `crypto-v1` in-process (no IPC).
 
-### Step 2: core authorization hooks
-- on every operation, call `authorizeOp({ op, rel, gatewayAccessAllowed })`
-- `gatewayAccessAllowed` becomes true only when liveness + gateway checks pass
-- initially implement only liveness socket ping (wrapper-alive) + gateway pid alive
-  - caller PID check and executable hash check require macFUSE context access; may be added after we confirm the bindings expose it reliably
+Notes / caveats to plan around:
+- Still requires macFUSE to be installed and configured on developer machines.
+- The FUSE handler surface is broad; we should start with a *minimal* set of operations required by OpenClaw’s wrapper + common usage.
+- CI will almost certainly not run a real mount; acceptance tests must be skippable.
 
-### Step 3: encrypted-at-rest for non-plaintext paths
-- for encrypted paths:
-  - store ciphertext in backstore format specified in `docs/design-v1.md` (`OCFS1` + AES-256-GCM)
-  - keep plaintext paths as direct passthrough
-- DEK provisioning: (plan)
-  - wrapper already handles keychain/dek-store work in tasks 04/??
-  - FUSE daemon should receive DEK via an env var pointing to a unix socket, or via stdin-only handoff (avoid env for secrets)
-  - keep tests using a stub DEK
+Non-goals for the first implementation pass:
+- Perfect macOS-specific “caller PID / signing” enforcement. We’ll start with wrapper-level liveness checks, then add stronger process identity checks if the binding exposes reliable context.
 
-### Step 4: acceptance tests
-- add a test suite that can run locally on macOS with macFUSE installed
-- in CI:
-  - skip if mount not permitted (detect via env flag or probing)
+## Proposed approach (incremental)
 
-## Deliverables
-- A short “spike report” section added here once we pick the library (Option A candidates)
-- A follow-up implementation task file once the library is confirmed
+Implement the FUSE daemon in 4 increments.
+
+### Step 1: minimal passthrough mount (first implementation PR)
+
+Goal: prove we can mount reliably and satisfy the wrapper lifecycle contract.
+
+Plan:
+- Replace `fusefs/ocprotectfs-fuse.js` placeholder with a real `fuse-native` mount.
+- Support a minimal set of ops needed for basic usage:
+  - `init`
+  - `getattr`, `readdir`
+  - `open`, `release`, `read`, `write`
+  - `create`, `unlink`, `rename`
+  - `mkdir`, `rmdir`
+  - (add `truncate` / `ftruncate` if needed by common editors)
+- Path mapping:
+  - FUSE `path` is absolute-from-mount (e.g. `/foo/bar`)
+  - compute `rel = path.slice(1)` (carefully handle `/`)
+  - map to `real = path.join(backstoreRoot, rel)`
+- “READY” contract:
+  - print `READY` only inside the `mount()` callback (i.e. after a successful mount).
+  - ensure errors print a single-line error + exit non-zero.
+
+### Step 2: `core-v1` authorization hooks
+
+Goal: deny sensitive operations unless the wrapper/gateway is considered “the caller”.
+
+Plan:
+- Introduce a small adapter API inside the FUSE daemon:
+  - `authorizeOrErr({ op, rel }) -> 0 | -EPERM`
+- Start with wrapper-level liveness checks only:
+  - validate wrapper “alive socket” / lease file (whatever the repo already uses)
+  - validate gateway PID is alive (best-effort)
+- Enforce authorization on:
+  - all mutating ops (create/write/rename/unlink/mkdir/rmdir/truncate)
+  - and optionally on reads for encrypted paths
+
+Future hardening (only if binding supports it):
+- Stronger “caller identity” using request context (PID/uid/gid) + allowlist.
+
+### Step 3: encrypted-at-rest for non-plaintext paths (`crypto-v1`)
+
+Goal: plaintext for allowed paths; encrypted backing store for everything else.
+
+Plan:
+- Plaintext paths: direct passthrough to backstore.
+- Encrypted paths:
+  - in backstore store ciphertext format defined in `docs/design-v1.md` (`OCFS1` + AES-256-GCM).
+  - implement read path: read ciphertext file → decrypt → serve plaintext bytes.
+  - implement write path: buffer writes (or block-aligned strategy) → encrypt → write ciphertext.
+
+Key provisioning plan:
+- Avoid env vars for secrets.
+- Preferred: wrapper passes DEK via stdin (one-shot) or via a dedicated unix domain socket created with strict perms.
+- Tests should use a deterministic stub DEK.
+
+### Step 4: acceptance tests (best-effort)
+
+Goal: locally verifiable behavior without requiring CI FUSE mounts.
+
+Plan:
+- Add a macOS-only test script that:
+  - mounts into a temp dir
+  - performs a small set of fs operations
+  - asserts backstore effects
+  - unmounts cleanly
+- In CI, skip if macFUSE is not present or mounting is not permitted.
+
+## Follow-up work items (implementation tasks)
+
+### Task 13 (follow-up): macFUSE passthrough mount using `fuse-native`
+
+Acceptance criteria:
+- [ ] `ocprotectfs` wrapper can start the FUSE daemon and receive `READY`.
+- [ ] Mount succeeds on macOS with macFUSE installed.
+- [ ] Basic ops work: `ls`, `cat`, `mkdir`, `touch`, `rm`, `mv` inside the mount.
+- [ ] Unmount is clean (no hung process); wrapper stop path works.
+- [ ] Unit tests continue to pass (`npm test`).
+- [ ] Optional (best-effort) local-only mount test exists and can be skipped in CI.
+
+Risks:
+- Native build friction on developer machines (Xcode CLT / node-gyp).
+- macFUSE permission / configuration issues.
+- Missing ops needed by real-world programs (e.g. editors triggering `ftruncate`, `fsync`, xattrs).
 
 ## Acceptance criteria (for this planning PR)
-- [ ] `tasks/STATUS.md` updated with a concrete Next item pointing at this task
+
+- [ ] `tasks/STATUS.md` updated with a concrete Next item pointing at the follow-up implementation.
 - [ ] This task file clearly states:
   - the current gap (no real mount)
   - viable options
+  - a chosen library and rationale
   - a proposed incremental approach
-  - initial acceptance criteria for the implementation follow-up
+  - initial acceptance criteria + risks for the follow-up implementation
 - [ ] No code behavior changes; `npm test` still passes
