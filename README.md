@@ -53,15 +53,15 @@ In this project, macFUSE routes file operations on `~/.openclaw` into our FUSE d
 ```mermaid
 flowchart TB
   subgraph UserSpace[User space: agent]
-    W[wrapper (ocprotectfs-wrapper)]
-    F[FUSE daemon (ocprotectfs-fuse)]
-    G[openclaw-gateway]
+    W[wrapper — ocprotectfs-wrapper]
+    F[FUSE daemon — ocprotectfs-fuse]
+    G[OpenClaw gateway]
   end
 
   subgraph FS[Filesystem]
-    M[(mountpoint ~/.openclaw)]
-    B[(backstore ~/.openclaw.real)]
-    K[(Keychain: KEK)]
+    M[(mountpoint: ~/.openclaw)]
+    B[(backstore: ~/.openclaw.real)]
+    K[(Keychain item: KEK)]
   end
 
   W -->|starts| F
@@ -82,7 +82,7 @@ flowchart LR
   KEK[KEK (Keychain-derived)] -->|wrap/unwrap| DEK[DEK (per file)]
   DEK -->|AEAD XChaCha20-Poly1305| C
   C -->|decrypt| P
-  DEK --> S[Sidecar *.ocpfs.dek (wrapped DEK + metadata)]
+  DEK --> S[Sidecar: *.ocpfs.dek — wrapped DEK + metadata]
 ```
 
 ## Installation (developer)
