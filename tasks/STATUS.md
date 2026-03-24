@@ -1,9 +1,9 @@
 # STATUS
 
 ## Current (PLAN)
-- Plan task: 06-migration-mount
-- Focus: safe migration of existing `~/.openclaw` content into backstore + mounting behavior.
-- Status: migration logic + tests implemented; PR open (see GitHub).
+- Plan task: 07-hardening-owasp
+- Focus: security hardening pass (OWASP-ish checklist + misc footguns).
+- Status: task stub + checklist in progress.
 
 ## Done / mostly done
 - PLAN 00-design: done (PR #2)
@@ -13,10 +13,10 @@
   - gaps: confirm full required ops for OpenClaw behavior; add acceptance tests around allow/deny behavior.
 - PLAN 03-encryption: done (PR #8)
 - PLAN 05-tests: done (PR #16)
+- PLAN 06-migration-mount: done (PR #18)
 - LEGACY 05-fail-closed-ready: done (PR #10)
 
 ## Next (PLAN)
-- 06-migration-mount
 - 07-hardening-owasp
 
 ## Definition of Done (per PR)
