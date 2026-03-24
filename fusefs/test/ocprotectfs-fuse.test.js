@@ -37,6 +37,32 @@ test('ocprotectfs-fuse: --help exits 0', async () => {
   assert.match(out.buf, /ocprotectfs-fuse/);
 });
 
+function fsyncFileSafe(filePath) {
+  try {
+    const fd = fs.openSync(filePath, 'r+');
+    try {
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    // best-effort: some backends/filesystems may not support fsync in all cases
+  }
+}
+
+function fsyncDirSafe(dirPath) {
+  try {
+    const fd = fs.openSync(dirPath, 'r');
+    try {
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    // best-effort: fsync on directories is not portable
+  }
+}
+
 test('ocprotectfs-fuse: best-effort real mount passthrough + fail-closed (skipped in CI)', async (t) => {
   if (!canAttemptRealMount()) {
     t.skip('requires macOS + macFUSE + fuse-native');
@@ -91,6 +117,81 @@ test('ocprotectfs-fuse: best-effort real mount passthrough + fail-closed (skippe
     assert.throws(() => fs.writeFileSync(path.join(mountpoint, 'secret.txt'), 'nope'), /EACCES|operation not permitted/i);
   } finally {
     // terminate cleanly
+    p.kill('SIGTERM');
+    await new Promise((resolve) => p.on('close', () => resolve()));
+  }
+});
+
+test('ocprotectfs-fuse: best-effort real mount editor-style atomic save (workspace passthrough) (skipped in CI)', async (t) => {
+  if (!canAttemptRealMount()) {
+    t.skip('requires macOS + macFUSE + fuse-native');
+    return;
+  }
+
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'ocpfs-fuse-'));
+  const backstore = path.join(base, 'backstore');
+  const mountpoint = path.join(base, 'mountpoint');
+  fs.mkdirSync(backstore);
+  fs.mkdirSync(mountpoint);
+
+  const p = spawn(process.execPath, [FUSE_BIN, '--backstore', backstore, '--mountpoint', mountpoint], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  try {
+    await new Promise((resolve, reject) => {
+      const timeoutMs = 8000;
+      const tt = setTimeout(() => reject(new Error('timeout waiting for READY (mount)')), timeoutMs);
+      let buf = '';
+      p.stdout.on('data', (d) => {
+        buf += d.toString('utf8');
+        if (buf.includes('READY')) {
+          clearTimeout(tt);
+          resolve();
+        }
+      });
+      p.on('exit', (code) => {
+        if (code && code !== 0) {
+          clearTimeout(tt);
+          reject(new Error(`fuse process exited before READY (code=${code})`));
+        }
+      });
+    });
+
+    // Simulate an editor atomic-save pattern:
+    // 1) write tmp
+    // 2) fsync tmp
+    // 3) rename(tmp -> file) (possibly overwriting)
+    // 4) fsync parent dir (best-effort)
+
+    const workspaceDir = path.join(mountpoint, 'workspace');
+    fs.mkdirSync(workspaceDir, { recursive: true });
+
+    const finalName = 'note.txt';
+    const tmpName = `${finalName}.tmp`;
+
+    const finalMount = path.join(workspaceDir, finalName);
+    const tmpMount = path.join(workspaceDir, tmpName);
+
+    // initial save
+    fs.writeFileSync(tmpMount, 'v1');
+    fsyncFileSafe(tmpMount);
+    fs.renameSync(tmpMount, finalMount);
+    fsyncDirSafe(workspaceDir);
+
+    // overwrite save
+    fs.writeFileSync(tmpMount, 'v2');
+    fsyncFileSafe(tmpMount);
+    fs.renameSync(tmpMount, finalMount);
+    fsyncDirSafe(workspaceDir);
+
+    assert.equal(fs.readFileSync(finalMount, 'utf8'), 'v2');
+
+    // Backstore should match plaintext for workspace passthrough.
+    const backFile = path.join(backstore, 'workspace', finalName);
+    assert.equal(fs.readFileSync(backFile, 'utf8'), 'v2');
+    assert.equal(fs.existsSync(path.join(backstore, 'workspace', tmpName)), false);
+  } finally {
     p.kill('SIGTERM');
     await new Promise((resolve) => p.on('close', () => resolve()));
   }
