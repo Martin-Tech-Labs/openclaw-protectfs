@@ -20,9 +20,10 @@ function isAlive(pid) {
 }
 
 test('run: requireFuseReady returns stable exit code even if shutdown times out', async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ocpfs-failclosed-timeout-'));
-  const backstore = path.join(dir, 'backstore');
-  const mountpoint = path.join(dir, 'mount');
+  // Keep paths short: unix socket paths have small length limits on macOS.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'o-'));
+  const backstore = path.join(dir, 'b');
+  const mountpoint = path.join(dir, 'm');
   const fusePidFile = path.join(dir, 'fuse.pid');
 
   const fuseScript = path.join(dir, 'fuse.js');

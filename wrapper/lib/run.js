@@ -1,11 +1,13 @@
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const net = require('node:net');
 
 const EXIT = {
   OK: 0,
   CONFIG: 2,
   PREPARE_FS: 3,
+  LIVENESS: 4,
   FUSE_START: 10,
   FUSE_NOT_READY: 12,
   GATEWAY_START: 11,
@@ -100,6 +102,46 @@ function prepareDir(p, mode) {
   }
 }
 
+async function createLivenessSocket(mountpoint) {
+  // Keep socket filename short to avoid unix domain socket path length limits
+  // on macOS (sun_path is ~104 bytes).
+  const sockPath = path.join(mountpoint, '.ocpfs.sock');
+
+  // If a stale socket exists, remove it. If a non-socket exists, refuse.
+  try {
+    const st = fs.lstatSync(sockPath);
+    if (st.isSocket()) fs.unlinkSync(sockPath);
+    else throw new Error(`refusing to replace non-socket path: ${sockPath}`);
+  } catch (e) {
+    if (e && e.code !== 'ENOENT') throw e;
+  }
+
+  const server = net.createServer((c) => {
+    // Simple contract: accept connections to prove wrapper is alive.
+    c.end('OK\n');
+  });
+
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(sockPath, () => resolve());
+  });
+
+  let closed = false;
+  const close = async () => {
+    if (closed) return;
+    closed = true;
+
+    await new Promise((resolve) => server.close(() => resolve()));
+    try {
+      fs.unlinkSync(sockPath);
+    } catch (_) {
+      // ignore
+    }
+  };
+
+  return { path: sockPath, close };
+}
+
 async function run(cfg) {
   validateConfig(cfg);
 
@@ -114,12 +156,34 @@ async function run(cfg) {
     return EXIT.PREPARE_FS;
   }
 
-  const fuse = spawn(cfg.fuseBin, cfg.fuseArgs, { stdio: ['ignore', 'pipe', 'pipe'], detached: true });
+  // Task 05: liveness socket contract (v1)
+  // - wrapper creates a unix socket in the mountpoint
+  // - wrapper passes its path to both fuse and gateway via env
+  // - wrapper removes the socket on shutdown
+  let liveness;
+  try {
+    liveness = await createLivenessSocket(cfg.mountpoint);
+    log(`liveness socket: ${liveness.path}`);
+  } catch (e) {
+    log(`liveness socket failed: ${e.message}`);
+    return EXIT.LIVENESS;
+  }
+
+  const childEnv = { ...process.env, OCPROTECTFS_LIVENESS_SOCK: liveness.path };
+
+  const fuse = spawn(cfg.fuseBin, cfg.fuseArgs, {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    detached: true,
+    env: childEnv,
+  });
   fuse.unref();
   teeChildOutput(fuse, 'fuse');
   log(`starting fuse: ${cfg.fuseBin} ${cfg.fuseArgs.join(' ')}`);
 
-  if (!fuse.pid) return EXIT.FUSE_START;
+  if (!fuse.pid) {
+    await liveness.close();
+    return EXIT.FUSE_START;
+  }
   log(`fuse started pid=${fuse.pid}`);
 
   // Rudimentary readiness detection (Task 03): proceed once the fuse process
@@ -138,28 +202,32 @@ async function run(cfg) {
         // even if teardown times out.
         log(`shutdown error while failing closed: ${e.message}`);
       }
+      await liveness.close();
       return EXIT.FUSE_NOT_READY;
     }
     log(`fuse readiness not detected (${ready.reason}); continuing`);
   }
 
-  const gateway = spawn(cfg.gatewayBin, cfg.gatewayArgs, { stdio: 'inherit', detached: true });
+  const gateway = spawn(cfg.gatewayBin, cfg.gatewayArgs, { stdio: 'inherit', detached: true, env: childEnv });
   gateway.unref();
   log(`starting gateway: ${cfg.gatewayBin} ${cfg.gatewayArgs.join(' ')}`);
   if (!gateway.pid) {
     await shutdownBoth(fuse.pid, null, cfg.shutdownTimeoutMs);
+    await liveness.close();
     return EXIT.GATEWAY_START;
   }
   log(`gateway started pid=${gateway.pid}`);
 
-  return await supervise(fuse, gateway, cfg.shutdownTimeoutMs);
+  const code = await supervise(fuse, gateway, cfg.shutdownTimeoutMs, liveness);
+  await liveness.close();
+  return code;
 }
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function supervise(fuse, gateway, timeoutMs) {
+async function supervise(fuse, gateway, timeoutMs, liveness) {
   let done = false;
 
   const onSignal = async (sig) => {
@@ -168,9 +236,11 @@ async function supervise(fuse, gateway, timeoutMs) {
     log(`signal ${sig} received; shutting down`);
     try {
       await shutdownBoth(fuse.pid, gateway.pid, timeoutMs);
+      if (liveness) await liveness.close();
       process.exit(EXIT.OK);
     } catch (e) {
       log(`shutdown error: ${e.message}`);
+      if (liveness) await liveness.close();
       process.exit(EXIT.SHUTDOWN);
     }
   };
@@ -187,11 +257,18 @@ async function supervise(fuse, gateway, timeoutMs) {
 
   log(`${first.name} exited (code=${first.code}); shutting down`);
   await shutdownBoth(fuse.pid, gateway.pid, timeoutMs);
+  if (liveness) await liveness.close();
   return first.name === 'fuse' ? EXIT.FUSE_DIED : EXIT.GATEWAY_DIED;
 }
 
 function onceExit(child, name) {
   return new Promise((resolve) => {
+    // Child might have already exited before we attached listeners.
+    if (child.exitCode !== null || child.signalCode) {
+      const code = child.signalCode ? 128 : child.exitCode;
+      return resolve({ name, code: Number.isFinite(code) ? code : 0 });
+    }
+
     child.once('exit', (code, signal) => {
       if (signal) return resolve({ name, code: 128 });
       resolve({ name, code: Number.isFinite(code) ? code : 0 });

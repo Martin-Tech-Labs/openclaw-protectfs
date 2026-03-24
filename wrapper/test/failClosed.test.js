@@ -20,9 +20,10 @@ function isAlive(pid) {
 }
 
 test('run: requireFuseReady fails closed (kills fuse; does not start gateway)', async () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ocpfs-failclosed-'));
-  const backstore = path.join(dir, 'backstore');
-  const mountpoint = path.join(dir, 'mount');
+  // Keep paths short: unix socket paths have small length limits on macOS.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'o-'));
+  const backstore = path.join(dir, 'b');
+  const mountpoint = path.join(dir, 'm');
   const markerGateway = path.join(dir, 'gateway.started');
   const fusePidFile = path.join(dir, 'fuse.pid');
 
