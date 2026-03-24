@@ -1,13 +1,14 @@
 # STATUS
 
 ## Current
-- Task: 04-encryption-impl
-- Task file: `tasks/04-encryption-impl.md`
+- Task: 05-fail-closed-ready
+- Task file: `tasks/05-fail-closed-ready.md`
 
 ## Done
 - 01-design (merged; PR #2)
 - 02-wrapper-skeleton (merged; PR #4)
 - 03-fusefs-skeleton (merged; PR #6)
+- 04-encryption-impl (merged; PR #8)
 
 ## Next
 - (none)

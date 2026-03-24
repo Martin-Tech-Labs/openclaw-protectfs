@@ -102,7 +102,8 @@ function prepareDir(p, mode) {
 async function run(cfg) {
   validateConfig(cfg);
 
-  log('ocprotectfs: NOTE: Task 02 skeleton; fail-closed enforcement is TODO');
+  if (cfg.requireFuseReady) log('ocprotectfs: fail-closed enforcement enabled (require READY before gateway)');
+  else log('ocprotectfs: NOTE: Task 02 skeleton; fail-closed enforcement disabled (gateway may start without READY)');
 
   try {
     prepareDir(cfg.backstore, 0o700);
@@ -122,9 +123,18 @@ async function run(cfg) {
 
   // Rudimentary readiness detection (Task 03): proceed once the fuse process
   // prints a READY line, or after a short timeout for legacy placeholders.
-  const ready = await waitForReady(fuse, { timeoutMs: 2000, line: 'READY' });
-  if (ready.ok) log(`fuse reported ready after ${ready.ms}ms`);
-  else log(`fuse readiness not detected (${ready.reason}); continuing`);
+  const readyTimeoutMs = Number.isFinite(cfg.fuseReadyTimeoutMs) ? cfg.fuseReadyTimeoutMs : 2000;
+  const ready = await waitForReady(fuse, { timeoutMs: readyTimeoutMs, line: 'READY' });
+  if (ready.ok) {
+    log(`fuse reported ready after ${ready.ms}ms`);
+  } else {
+    if (cfg.requireFuseReady) {
+      log(`fuse readiness not detected (${ready.reason}); failing closed`);
+      await shutdownBoth(fuse.pid, null, cfg.shutdownTimeoutMs);
+      return EXIT.FUSE_START;
+    }
+    log(`fuse readiness not detected (${ready.reason}); continuing`);
+  }
 
   const gateway = spawn(cfg.gatewayBin, cfg.gatewayArgs, { stdio: 'inherit', detached: true });
   gateway.unref();
