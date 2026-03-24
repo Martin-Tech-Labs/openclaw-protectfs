@@ -21,6 +21,9 @@ const OPS = Object.freeze({
   UNLINK: 'unlink',
   CHMOD: 'chmod',
   CHOWN: 'chown',
+  UTIMENS: 'utimens',
+  FSYNC: 'fsync',
+  STATFS: 'statfs',
 });
 
 function isKnownOp(op) {

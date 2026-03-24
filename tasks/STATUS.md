@@ -1,8 +1,9 @@
 # STATUS
 
 ## Current (PLAN)
-- After Task 15: expand real-mount editor-ops coverage (chmod/utimens/fsync/statfs), add wrapper-integrated end-to-end test, and document local macFUSE prerequisites.
-- Status: not started.
+- Task 16: expand real-mount editor-ops coverage (chmod/utimens/fsync/statfs), add wrapper-integrated end-to-end test, and document local macFUSE prerequisites.
+  - See: `tasks/16-real-mount-editor-ops-plus-wrapper-e2e.md`
+- Status: in progress.
 
 ## Done / mostly done
 - PLAN 00-design: done (PR #2)

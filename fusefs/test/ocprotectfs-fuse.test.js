@@ -255,6 +255,82 @@ test('ocprotectfs-fuse: best-effort real mount temp/swap file patterns (workspac
   }
 });
 
+test('ocprotectfs-fuse: best-effort real mount chmod/utimens/fsync/statfs (workspace passthrough) (skipped in CI)', async (t) => {
+  if (!canAttemptRealMount()) {
+    t.skip('requires macOS + macFUSE + fuse-native');
+    return;
+  }
+
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'ocpfs-fuse-'));
+  const backstore = path.join(base, 'backstore');
+  const mountpoint = path.join(base, 'mountpoint');
+  fs.mkdirSync(backstore);
+  fs.mkdirSync(mountpoint);
+
+  const p = spawn(process.execPath, [FUSE_BIN, '--backstore', backstore, '--mountpoint', mountpoint], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  try {
+    await new Promise((resolve, reject) => {
+      const timeoutMs = 8000;
+      const tt = setTimeout(() => reject(new Error('timeout waiting for READY (mount)')), timeoutMs);
+      let buf = '';
+      p.stdout.on('data', (d) => {
+        buf += d.toString('utf8');
+        if (buf.includes('READY')) {
+          clearTimeout(tt);
+          resolve();
+        }
+      });
+      p.on('exit', (code) => {
+        if (code && code !== 0) {
+          clearTimeout(tt);
+          reject(new Error(`fuse process exited before READY (code=${code})`));
+        }
+      });
+    });
+
+    const workspaceDir = path.join(mountpoint, 'workspace');
+    fs.mkdirSync(workspaceDir, { recursive: true });
+
+    const fp = path.join(workspaceDir, 'meta.txt');
+    fs.writeFileSync(fp, 'meta');
+
+    // chmod
+    fs.chmodSync(fp, 0o600);
+    const st1 = fs.statSync(fp);
+    assert.equal(st1.mode & 0o777, 0o600);
+
+    // utimens
+    const t0 = new Date('2020-01-02T03:04:05Z');
+    fs.utimesSync(fp, t0, t0);
+    const st2 = fs.statSync(fp);
+    assert.ok(Math.abs(st2.mtimeMs - t0.getTime()) < 2000);
+
+    // fsync should not error (exercise fsync op)
+    {
+      const fd = fs.openSync(fp, 'r+');
+      try {
+        fs.fsyncSync(fd);
+      } finally {
+        fs.closeSync(fd);
+      }
+    }
+
+    // statfs should work on mountpoint / workspace dir
+    const sfs = fs.statfsSync(workspaceDir);
+    assert.ok(sfs && typeof sfs.bsize === 'number' && sfs.bsize > 0);
+
+    // backstore remains plaintext
+    const backFp = path.join(backstore, 'workspace', 'meta.txt');
+    assert.equal(fs.readFileSync(backFp, 'utf8'), 'meta');
+  } finally {
+    p.kill('SIGTERM');
+    await new Promise((resolve) => p.on('close', () => resolve()));
+  }
+});
+
 test('ocprotectfs-fuse: best-effort real mount encrypted-at-rest (skipped in CI)', async (t) => {
   if (!canAttemptRealMount()) {
     t.skip('requires macOS + macFUSE + fuse-native');
