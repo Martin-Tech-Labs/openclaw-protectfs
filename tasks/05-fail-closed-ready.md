@@ -18,5 +18,6 @@ This is a step towards the wrapper being a real root-of-trust.
 - [x] `make test` passes locally.
 
 ## Notes
+- Merged in PR #10.
 - For now, readiness is a log-line based protocol (`READY`). Future work may replace this with a socket-based liveness protocol and/or mountpoint verification.
 - Wrapper returns a stable `EXIT.FUSE_NOT_READY` even if teardown times out (best-effort kill), to avoid masking fail-closed semantics with a generic error code.

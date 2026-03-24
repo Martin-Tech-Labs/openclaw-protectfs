@@ -11,6 +11,7 @@
 - PLAN 02-fusefs-core: mostly done (PR #6)
   - gaps: confirm full required ops for OpenClaw behavior; add acceptance tests around allow/deny behavior.
 - PLAN 03-encryption: done (PR #8)
+- LEGACY 05-fail-closed-ready: done (PR #10)
 
 ## Next (PLAN)
 - 05-tests
@@ -24,4 +25,3 @@ For non-trivial PRs:
 - [ ] `make test` (or equivalent) passes locally
 - [ ] Security notes for access-control / crypto changes
 - [ ] PR description includes: What/Why/How/Test Plan/Risks
-
