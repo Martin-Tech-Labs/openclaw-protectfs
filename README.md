@@ -4,6 +4,9 @@ macFUSE-based protective filesystem for the OpenClaw directory on macOS.
 
 This repo is organized into incremental tasks under `tasks/`.
 
+## V1 status
+**V1 COMPLETE.** See `tasks/STATUS.md` for the final bookkeeping PR and historical task log.
+
 ## Quick links
 - Current task: `tasks/STATUS.md`
 - Operator guide: `docs/operator-guide.md`
