@@ -3,7 +3,7 @@
 ## Current (PLAN)
 - Plan task: 06-migration-mount
 - Focus: safe migration of existing `~/.openclaw` content into backstore + mounting behavior.
-- Status: task doc drafted; implementation pending.
+- Status: migration logic + tests implemented; PR open (see GitHub).
 
 ## Done / mostly done
 - PLAN 00-design: done (PR #2)
