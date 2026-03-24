@@ -80,14 +80,33 @@ function toRealPath(backstoreRoot, fusePath) {
   // `fusePath` is an absolute path within the mount, like `/` or `/foo/bar`.
   // Map to a path under `backstoreRoot`.
   if (fusePath === '/') return backstoreRoot;
+
   const rel = fusePath.startsWith('/') ? fusePath.slice(1) : fusePath;
-  // Important: backstoreRoot is already absolute; joining keeps us under it.
-  return path.join(backstoreRoot, rel);
+
+  // Prevent path traversal / escaping the backstore.
+  // Use an explicit `./` prefix so a rel path beginning with `..` is still treated as relative.
+  const real = path.resolve(backstoreRoot, `.${path.sep}${rel}`);
+
+  if (real !== backstoreRoot && !real.startsWith(backstoreRoot + path.sep)) {
+    const err = new Error('path escapes backstore');
+    err.code = 'EACCES';
+    throw err;
+  }
+
+  return real;
 }
 
-function errnoCode(err) {
+function errnoCode(err, Fuse) {
   if (!err) return 0;
+
+  // Prefer Fuse's explicit errno mapping when available.
+  if (Fuse && err.code && typeof Fuse[err.code] === 'number') {
+    return -Fuse[err.code];
+  }
+
+  // Node often provides a negative errno already.
   if (typeof err.errno === 'number') return err.errno;
+
   // Fallback: generic failure.
   return -1;
 }
@@ -115,90 +134,118 @@ function main() {
 
   const Fuse = loadFuseNative();
 
+  const rp = (p, cb) => {
+    try {
+      return toRealPath(backstore, p);
+    } catch (err) {
+      cb(errnoCode(err, Fuse));
+      return null;
+    }
+  };
+
   const ops = {
     // getattr must support both files and dirs.
     getattr: (p, cb) => {
-      fs.lstat(toRealPath(backstore, p), (err, st) => {
-        if (err) return cb(errnoCode(err));
+      const real = rp(p, cb);
+      if (!real) return;
+      fs.lstat(real, (err, st) => {
+        if (err) return cb(errnoCode(err, Fuse));
         return cb(0, st);
       });
     },
 
     readdir: (p, cb) => {
-      fs.readdir(toRealPath(backstore, p), (err, entries) => {
-        if (err) return cb(errnoCode(err));
+      const real = rp(p, cb);
+      if (!real) return;
+      fs.readdir(real, (err, entries) => {
+        if (err) return cb(errnoCode(err, Fuse));
         return cb(0, entries);
       });
     },
 
     open: (p, flags, cb) => {
-      fs.open(toRealPath(backstore, p), flags, (err, fd) => {
-        if (err) return cb(errnoCode(err));
+      const real = rp(p, cb);
+      if (!real) return;
+      fs.open(real, flags, (err, fd) => {
+        if (err) return cb(errnoCode(err, Fuse));
         return cb(0, fd);
       });
     },
 
     release: (p, fd, cb) => {
       fs.close(fd, (err) => {
-        if (err) return cb(errnoCode(err));
+        if (err) return cb(errnoCode(err, Fuse));
         return cb(0);
       });
     },
 
     read: (p, fd, buf, len, pos, cb) => {
       fs.read(fd, buf, 0, len, pos, (err, bytesRead) => {
-        if (err) return cb(errnoCode(err));
+        if (err) return cb(errnoCode(err, Fuse));
         return cb(bytesRead);
       });
     },
 
     write: (p, fd, buf, len, pos, cb) => {
       fs.write(fd, buf, 0, len, pos, (err, bytesWritten) => {
-        if (err) return cb(errnoCode(err));
+        if (err) return cb(errnoCode(err, Fuse));
         return cb(bytesWritten);
       });
     },
 
     create: (p, mode, cb) => {
-      const real = toRealPath(backstore, p);
+      const real = rp(p, cb);
+      if (!real) return;
       const flags = fs.constants.O_CREAT | fs.constants.O_TRUNC | fs.constants.O_RDWR;
       fs.open(real, flags, mode, (err, fd) => {
-        if (err) return cb(errnoCode(err));
+        if (err) return cb(errnoCode(err, Fuse));
         return cb(0, fd);
       });
     },
 
     unlink: (p, cb) => {
-      fs.unlink(toRealPath(backstore, p), (err) => {
-        if (err) return cb(errnoCode(err));
+      const real = rp(p, cb);
+      if (!real) return;
+      fs.unlink(real, (err) => {
+        if (err) return cb(errnoCode(err, Fuse));
         return cb(0);
       });
     },
 
     rename: (src, dest, cb) => {
-      fs.rename(toRealPath(backstore, src), toRealPath(backstore, dest), (err) => {
-        if (err) return cb(errnoCode(err));
+      const realSrc = rp(src, cb);
+      if (!realSrc) return;
+      const realDest = rp(dest, cb);
+      if (!realDest) return;
+      fs.rename(realSrc, realDest, (err) => {
+        if (err) return cb(errnoCode(err, Fuse));
         return cb(0);
       });
     },
 
     mkdir: (p, mode, cb) => {
-      fs.mkdir(toRealPath(backstore, p), { mode }, (err) => {
-        if (err) return cb(errnoCode(err));
+      const real = rp(p, cb);
+      if (!real) return;
+      fs.mkdir(real, { mode }, (err) => {
+        if (err) return cb(errnoCode(err, Fuse));
         return cb(0);
       });
     },
 
     rmdir: (p, cb) => {
-      fs.rmdir(toRealPath(backstore, p), (err) => {
-        if (err) return cb(errnoCode(err));
+      const real = rp(p, cb);
+      if (!real) return;
+      fs.rmdir(real, (err) => {
+        if (err) return cb(errnoCode(err, Fuse));
         return cb(0);
       });
     },
 
     truncate: (p, size, cb) => {
-      fs.truncate(toRealPath(backstore, p), size, (err) => {
-        if (err) return cb(errnoCode(err));
+      const real = rp(p, cb);
+      if (!real) return;
+      fs.truncate(real, size, (err) => {
+        if (err) return cb(errnoCode(err, Fuse));
         return cb(0);
       });
     },
