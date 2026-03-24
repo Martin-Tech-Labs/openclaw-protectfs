@@ -1,15 +1,16 @@
 # STATUS
 
 ## Current
-- Task: 03-fusefs-skeleton
-- Task file: `tasks/03-fusefs-skeleton.md`
+- Task: 04-encryption-impl
+- Task file: `tasks/04-encryption-impl.md`
 
 ## Done
 - 01-design (merged; PR #2)
 - 02-wrapper-skeleton (merged; PR #4)
+- 03-fusefs-skeleton (merged; PR #6)
 
 ## Next
-- 04-encryption-impl
+- (none)
 
 ## Definition of Done (DoD)
 For non-trivial PRs:
