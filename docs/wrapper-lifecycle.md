@@ -64,6 +64,12 @@ The wrapper currently **does not** invoke `umount` / `diskutil unmount` itself.
 
 This keeps the wrapper conservative: it focuses on process supervision and fail-closed behavior, and avoids making assumptions about unmount mechanics across macFUSE versions.
 
+## Known limitations / TODOs
+
+- Wrapper does **not** invoke `umount` / `diskutil unmount` today; it relies on the FUSE daemon to unmount itself on shutdown.
+- Wrapper currently expects FUSE readiness to be signaled by a `READY` line; if this contract changes, `--require-fuse-ready` will need updates.
+- Future work (out of scope for this task): wrapper-owned mount/unmount lifecycle management (see TODO in `wrapper/lib/run.js`).
+
 ## Tests
 
 See `wrapper/test/lifecycle.test.js` for process-group shutdown and supervision behavior, and `wrapper/test/livenessSocket.test.js` for socket creation/removal.

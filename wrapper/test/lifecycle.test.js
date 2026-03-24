@@ -165,14 +165,19 @@ test('wrapper lifecycle: SIGINT shuts down fuse+gateway process groups', async (
   const mountpoint = path.join(dir, 'm');
 
   const fusePidFile = path.join(dir, 'fuse.pid');
+  const fuseChildPidFile = path.join(dir, 'fuse.child.pid');
   const gatewayPidFile = path.join(dir, 'gateway.pid');
+  const gatewayChildPidFile = path.join(dir, 'gateway.child.pid');
 
   const fuseScript = path.join(dir, 'fuse.js');
   fs.writeFileSync(
     fuseScript,
     [
       'const fs = require("node:fs");',
+      'const { spawn } = require("node:child_process");',
       `fs.writeFileSync(${JSON.stringify(fusePidFile)}, String(process.pid));`,
+      'const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"]);',
+      `fs.writeFileSync(${JSON.stringify(fuseChildPidFile)}, String(child.pid));`,
       'console.log("READY");',
       'setInterval(() => {}, 1000);',
     ].join('\n'),
@@ -183,7 +188,10 @@ test('wrapper lifecycle: SIGINT shuts down fuse+gateway process groups', async (
     gatewayScript,
     [
       'const fs = require("node:fs");',
+      'const { spawn } = require("node:child_process");',
       `fs.writeFileSync(${JSON.stringify(gatewayPidFile)}, String(process.pid));`,
+      'const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"]);',
+      `fs.writeFileSync(${JSON.stringify(gatewayChildPidFile)}, String(child.pid));`,
       'setInterval(() => {}, 1000);',
     ].join('\n'),
   );
@@ -196,7 +204,9 @@ test('wrapper lifecycle: SIGINT shuts down fuse+gateway process groups', async (
 
   try {
     await waitForFile(fusePidFile, { proc: wrapper, capture: () => buf });
+    await waitForFile(fuseChildPidFile, { proc: wrapper, capture: () => buf });
     await waitForFile(gatewayPidFile, { proc: wrapper, capture: () => buf });
+    await waitForFile(gatewayChildPidFile, { proc: wrapper, capture: () => buf });
 
     // Give the wrapper a brief moment to finish its supervise() wiring.
     await sleep(50);
@@ -208,15 +218,19 @@ test('wrapper lifecycle: SIGINT shuts down fuse+gateway process groups', async (
     assert.equal(exit.code, EXIT.OK);
 
     const fusePid = Number(fs.readFileSync(fusePidFile, 'utf8'));
+    const fuseChildPid = Number(fs.readFileSync(fuseChildPidFile, 'utf8'));
     const gatewayPid = Number(fs.readFileSync(gatewayPidFile, 'utf8'));
+    const gatewayChildPid = Number(fs.readFileSync(gatewayChildPidFile, 'utf8'));
 
     for (let i = 0; i < 50; i++) {
-      if (!isAlive(fusePid) && !isAlive(gatewayPid)) break;
+      if (!isAlive(fusePid) && !isAlive(fuseChildPid) && !isAlive(gatewayPid) && !isAlive(gatewayChildPid)) break;
       await sleep(50);
     }
 
     assert.equal(isAlive(fusePid), false);
+    assert.equal(isAlive(fuseChildPid), false);
     assert.equal(isAlive(gatewayPid), false);
+    assert.equal(isAlive(gatewayChildPid), false);
   } finally {
     try {
       wrapper.kill('SIGKILL');
