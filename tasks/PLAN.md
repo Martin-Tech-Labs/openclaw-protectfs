@@ -44,3 +44,5 @@ V1 is considered "ready" when:
 
 ## Added tasks
 - PLAN 17-readme-operator-guide: README + diagrams + operator instructions
+
+- PLAN 19-keychain-kek-e2e: wire KEK retrieval/storage via macOS Keychain (user presence) and pass KEK to FUSE without env; update docs
