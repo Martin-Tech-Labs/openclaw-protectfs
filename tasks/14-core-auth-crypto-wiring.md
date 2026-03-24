@@ -33,6 +33,10 @@ Wire the existing `core-v1` (authorization checks) and `crypto-v1` (encrypted-at
 
 ## Acceptance criteria
 - [ ] `npm test` passes
+- [ ] Unit tests cover wiring for:
+  - plaintext passthrough for `workspace/**` without gateway
+  - fail-closed deny for encrypted paths without gateway
+  - encrypted-at-rest behavior when gateway + KEK are present (ciphertext on disk + DEK sidecar)
 - [ ] Encrypted paths are unreadable in the backstore (ciphertext on disk)
 - [ ] Gateway authorization is required for encrypted paths; missing gateway -> deny (fail closed)
 - [ ] Plaintext workspace paths remain usable without gateway
@@ -40,3 +44,7 @@ Wire the existing `core-v1` (authorization checks) and `crypto-v1` (encrypted-at
 ## Notes / risks
 - Careful with errno mapping: operations must return correct negative errno values to avoid confusing apps.
 - Avoid exposing any decrypted bytes to disk (temporary files) during read/write.
+- Current wiring uses env-based stubs for v1 bring-up:
+  - `OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1` gates encrypted-path access (default deny).
+  - `OCPROTECTFS_KEK_B64` provides the 32-byte KEK (base64) for decrypt/encrypt.
+- Encrypted file content is stored at the same relative backstore path as ciphertext, with a sidecar wrapped-DEK at `*.ocpfs.dek`.
