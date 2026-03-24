@@ -9,6 +9,7 @@
 - PLAN 00-design: done (PR #2)
 - PLAN 12-macfuse-integration: done (plan + decision)
 - PLAN 13-macfuse-passthrough: done (PR #33)
+- PLAN 14-core-auth-crypto-wiring: done (PR #35)
 - PLAN 01-wrapper: mostly done (PR #3, #4)
   - gaps: document clean shutdown/unmount behavior; ensure wrapper owns mount lifecycle; add tests around lifecycle.
 - PLAN 02-fusefs-core: mostly done (PR #6)
@@ -24,7 +25,7 @@
 - LEGACY 05-fail-closed-ready: done (PR #10)
 
 ## Next (PLAN)
-- (none)
+- After Task 15: expand real-mount editor-ops coverage (chmod/utimens/fsync/statfs), add wrapper-integrated end-to-end test, and document local macFUSE prerequisites.
 
 ## Definition of Done (per PR)
 For non-trivial PRs:
