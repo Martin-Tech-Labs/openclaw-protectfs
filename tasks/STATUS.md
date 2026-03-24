@@ -1,9 +1,9 @@
 # STATUS
 
 ## Current (PLAN)
-- Plan task: PLAN 10 — Wrapper test hygiene (lifecycle)
-- Focus: fix lifecycle test output capture option typo (`captureLabel` -> `capture`)
-- Status: PR opened (#28).
+- Plan task: (TBD)
+- Focus: pick next planned task
+- Status: needs planning.
 
 ## Done / mostly done
 - PLAN 00-design: done (PR #2)
@@ -17,6 +17,7 @@
 - PLAN 07-hardening-owasp: done (PR #22)
 - PLAN 08-wrapper-lifecycle-docs-tests: done (PR #26)
 - PLAN 09-fusefs-core-acceptance-tests: done (PR #25)
+- PLAN 10-wrapper-test-hygiene: done (PR #28)
 - LEGACY 05-fail-closed-ready: done (PR #10)
 
 ## Next (PLAN)
