@@ -75,22 +75,45 @@ To avoid TOCTOU overhead on every I/O, cache liveness result for a short TTL (e.
 
 ## Crypto
 ### Algorithm
-- AEAD (v1): XChaCha20-Poly1305 (24-byte nonce).
+- AEAD (v1): **AES-256-GCM** (12-byte nonce, 16-byte auth tag).
+  - Rationale: available in Node’s built-in `crypto` without extra deps.
+
+### Key hierarchy (KEK/DEK)
+- **KEK** (Key Encryption Key): 32 bytes.
+  - Stored in macOS Keychain.
+  - Retrieved by wrapper with user presence (later task: Keychain ACL pinned to wrapper).
+- **DEK** (Data Encryption Key): 32 bytes.
+  - Used by the FUSE daemon to encrypt/decrypt file contents.
+  - Stored on disk only in **wrapped** form (encrypted under KEK).
+
+### Wrapped DEK format (stored in backstore metadata)
+A single wrapped DEK blob contains:
+- magic bytes: `OCDEK1` (6 bytes)
+- version: 1 byte (0x01)
+- nonceLen: 1 byte (12)
+- nonce: 12 bytes
+- ciphertext: 32 bytes (the DEK)
+- tag: 16 bytes
+
+The header bytes are used as AEAD AAD.
 
 ### File format (encrypted backstore)
 Each encrypted file stored in backstore contains:
 - magic bytes: `OCFS1` (5 bytes)
 - version: 1 byte (0x01)
-- nonce: 24 bytes (XChaCha20-Poly1305)
-- ciphertext+tag (as produced by the AEAD)
+- alg: 1 byte (0x01 = AES-256-GCM)
+- nonceLen: 1 byte (12)
+- nonce: 12 bytes
+- ciphertext: N bytes
+- tag: 16 bytes
 
-Optional future fields: original size, header flags.
+The header bytes are used as AEAD AAD.
+
+Optional future fields: original size, compression flags.
 
 ### Key management
-- DEK stored as Keychain item.
-- Keychain item requires user presence.
-- ACL pinned to wrapper binary.
-- Wrapper passes DEK to FUSE daemon over a unix socket; FUSE never touches Keychain.
+- Wrapper retrieves/creates KEK via Keychain (or a stubbed backend in tests).
+- Wrapper unwraps/creates DEK (stored on disk in wrapped form) and passes DEK to FUSE over a unix socket; FUSE never touches Keychain.
 
 ## Required filesystem operations (v1)
 Minimum set:
