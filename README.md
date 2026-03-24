@@ -120,3 +120,42 @@ Some bring-up flows use explicit env gates for testing (e.g. allowing gateway ac
 - Work is tracked under `tasks/`.
 - Toby authors PRs; Joao reviews (max 2 rounds).
 
+
+
+
+## Running (v1)
+
+### Environment variables (bring-up)
+For the encrypted-path functionality in v1 bring-up:
+- `OCPROTECTFS_KEK_B64`: base64-encoded 32-byte KEK (required for encrypted paths)
+- `OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1`: enables encrypted-path access checks (bring-up/testing gate)
+
+### Start wrapper (spawns FUSE + gateway)
+Wrapper entrypoint:
+
+```bash
+node wrapper/ocprotectfs.js --help
+```
+
+Example (best-effort) invocation:
+
+```bash
+# Use the repo's fuse daemon + the existing OpenClaw gateway node entry.
+export OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1
+export OCPROTECTFS_KEK_B64="<base64-32-bytes>"
+
+node wrapper/ocprotectfs.js   --require-fuse-ready   --fuse-bin "$(command -v node)"   --fuse-arg "$(pwd)/fusefs/ocprotectfs-fuse.js"   --gateway-bin "$(command -v node)"   --gateway-arg "/Users/agent/openclaw/node_modules/openclaw/dist/index.js"   --gateway-arg gateway   --gateway-arg --port   --gateway-arg 18789
+```
+
+## Safety / rollback
+
+To stop and roll back:
+1) Stop the wrapper process (SIGINT / SIGTERM).
+2) Ensure the mount is unmounted (`umount ~/.openclaw` or the wrapper's best-effort unmount).
+3) If you need to restore the original directory layout:
+   - move `~/.openclaw` aside
+   - move `~/.openclaw.real` back to `~/.openclaw`
+
+## Contributing
+- Canonical plan: `tasks/PLAN.md`
+- Current status: `tasks/STATUS.md`
