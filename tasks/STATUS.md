@@ -1,14 +1,14 @@
 # STATUS
 
 ## Current
-- Task: 02-wrapper-skeleton
-- Task file: `tasks/02-wrapper-skeleton.md`
+- Task: 03-fusefs-skeleton
+- Task file: `tasks/03-fusefs-skeleton.md`
 
 ## Done
 - 01-design (merged; PR #2)
+- 02-wrapper-skeleton (merged; PR #4)
 
 ## Next
-- 03-fusefs-skeleton
 - 04-encryption-impl
 
 ## Definition of Done (DoD)
