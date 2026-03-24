@@ -158,6 +158,74 @@ test('wrapper lifecycle: SIGTERM shuts down fuse+gateway process groups', async 
   }
 });
 
+test('wrapper lifecycle: SIGINT shuts down fuse+gateway process groups', async () => {
+  // Keep paths short: unix socket paths have small length limits on macOS.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'o-'));
+  const backstore = path.join(dir, 'b');
+  const mountpoint = path.join(dir, 'm');
+
+  const fusePidFile = path.join(dir, 'fuse.pid');
+  const gatewayPidFile = path.join(dir, 'gateway.pid');
+
+  const fuseScript = path.join(dir, 'fuse.js');
+  fs.writeFileSync(
+    fuseScript,
+    [
+      'const fs = require("node:fs");',
+      `fs.writeFileSync(${JSON.stringify(fusePidFile)}, String(process.pid));`,
+      'console.log("READY");',
+      'setInterval(() => {}, 1000);',
+    ].join('\n'),
+  );
+
+  const gatewayScript = path.join(dir, 'gateway.js');
+  fs.writeFileSync(
+    gatewayScript,
+    [
+      'const fs = require("node:fs");',
+      `fs.writeFileSync(${JSON.stringify(gatewayPidFile)}, String(process.pid));`,
+      'setInterval(() => {}, 1000);',
+    ].join('\n'),
+  );
+
+  const wrapper = spawnWrapper({ cwd: dir, backstore, mountpoint, fuseScript, gatewayScript, shutdownTimeoutMs: 1500 });
+
+  let buf = '';
+  if (wrapper.stderr) wrapper.stderr.on('data', (d) => (buf += d.toString('utf8')));
+  if (wrapper.stdout) wrapper.stdout.on('data', (d) => (buf += d.toString('utf8')));
+
+  try {
+    await waitForFile(fusePidFile, { proc: wrapper, capture: () => buf });
+    await waitForFile(gatewayPidFile, { proc: wrapper, capture: () => buf });
+
+    // Give the wrapper a brief moment to finish its supervise() wiring.
+    await sleep(50);
+
+    wrapper.kill('SIGINT');
+
+    const exit = await new Promise((resolve) => wrapper.once('exit', (code, signal) => resolve({ code, signal })));
+    assert.equal(exit.signal, null);
+    assert.equal(exit.code, EXIT.OK);
+
+    const fusePid = Number(fs.readFileSync(fusePidFile, 'utf8'));
+    const gatewayPid = Number(fs.readFileSync(gatewayPidFile, 'utf8'));
+
+    for (let i = 0; i < 50; i++) {
+      if (!isAlive(fusePid) && !isAlive(gatewayPid)) break;
+      await sleep(50);
+    }
+
+    assert.equal(isAlive(fusePid), false);
+    assert.equal(isAlive(gatewayPid), false);
+  } finally {
+    try {
+      wrapper.kill('SIGKILL');
+    } catch (_) {
+      // ignore
+    }
+  }
+});
+
 test('wrapper lifecycle: fuse exit triggers gateway shutdown (EXIT.FUSE_DIED)', async () => {
   // Keep paths short: unix socket paths have small length limits on macOS.
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'o-'));

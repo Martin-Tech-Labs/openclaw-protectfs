@@ -1,9 +1,9 @@
 # STATUS
 
 ## Current (PLAN)
-- Plan task: 07-hardening-owasp
-- Focus: security hardening pass (OWASP-ish checklist + misc footguns).
-- Status: task stub + checklist in progress.
+- Plan task: 08-wrapper-lifecycle-docs-tests
+- Focus: document wrapper lifecycle + mount/unmount expectations; add a small missing lifecycle test.
+- Status: in progress.
 
 ## Done / mostly done
 - PLAN 00-design: done (PR #2)
@@ -14,10 +14,12 @@
 - PLAN 03-encryption: done (PR #8)
 - PLAN 05-tests: done (PR #16)
 - PLAN 06-migration-mount: done (PR #18)
+- PLAN 07-hardening-owasp: done (PR #22)
 - LEGACY 05-fail-closed-ready: done (PR #10)
 
 ## Next (PLAN)
-- 07-hardening-owasp
+- 08-wrapper-lifecycle-docs-tests
+- (then) 02-fusefs-core acceptance tests
 
 ## Definition of Done (per PR)
 For non-trivial PRs:
