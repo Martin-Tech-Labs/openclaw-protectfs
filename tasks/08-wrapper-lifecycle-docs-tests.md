@@ -19,11 +19,16 @@ This is a deliberately small, low-risk follow-on after Task 07.
 
 ## Acceptance criteria
 
-- [ ] `docs/wrapper-lifecycle.md` explains:
+- [x] `docs/wrapper-lifecycle.md` explains:
   - Wrapper creates/cleans liveness socket
   - Wrapper starts FUSE first, waits for READY when `--require-fuse-ready`
   - Wrapper starts gateway once FUSE is ready
   - SIGINT/SIGTERM cause wrapper to terminate both child process groups
   - Unmount behavior expectations (FUSE should unmount itself on SIGTERM; wrapper currently does not `umount`)
-- [ ] Add at least one additional lifecycle test (SIGINT shutdown)
-- [ ] `make test` passes
+- [x] Add at least one additional lifecycle test (SIGINT shutdown)
+- [x] `make test` passes
+
+## Notes
+
+- Regression test strengthened to assert SIGINT kills full process groups (daemon + child) for both FUSE and gateway.
+- Added a short “Known limitations / TODOs” section to wrapper lifecycle docs.
