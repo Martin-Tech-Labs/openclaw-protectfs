@@ -30,3 +30,14 @@ This fills the remaining gap called out under **PLAN 02-fusefs-core**: we have u
 - If running a real mount is too heavy for CI, add a clear split:
   - fast mocked tests (default)
   - acceptance tests (opt-in, e.g. `TEST_ACCEPTANCE=1`), but still runnable on a dev machine.
+
+## How to run
+For now, the repo does not implement a real macFUSE mount. The acceptance suite is therefore
+implemented as **core contract tests** (logic-only) that validate allow/deny outcomes.
+
+Run:
+- `npm test`
+
+Files:
+- `fusefs/lib/core-v1.js`
+- `fusefs/test/core-acceptance.test.js`
