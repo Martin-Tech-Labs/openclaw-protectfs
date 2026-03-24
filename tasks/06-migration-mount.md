@@ -27,7 +27,8 @@ Users may already have data in `~/.openclaw` from previous installs. ProtectFS m
 - Supporting arbitrary mountpoint paths beyond the existing flags.
 
 ## Proposed behavior
-- Introduce a marker file in backstore, e.g. `~/.openclaw.real/.ocpfs.migrated` (format: JSON or a single line).
+- Introduce a marker file in backstore, e.g. `~/.openclaw.real/.ocpfs.migrated.json` (JSON).
+- Use an in-progress marker `~/.openclaw.real/.ocpfs.migrating.json` to detect interrupted runs.
 - On startup, before launching FUSE/gateway:
   - If mountpoint is empty (or only contains expected wrapper-managed artifacts), do nothing.
   - If mountpoint contains legacy content and marker is missing:
@@ -36,11 +37,12 @@ Users may already have data in `~/.openclaw` from previous installs. ProtectFS m
   - If marker exists, do not re-migrate.
 
 ## Acceptance criteria
-- [ ] Migration is **idempotent** and does not delete data.
-- [ ] Wrapper fails closed if mountpoint/backstore are in an unsafe state.
-- [ ] `make test` includes unit tests for migration decision logic (empty mountpoint, legacy content present, marker present, partial migration).
-- [ ] `tasks/STATUS.md` updated with any known limitations.
+- [x] Migration is **idempotent** and does not delete data.
+- [x] Wrapper fails closed if mountpoint/backstore are in an unsafe state.
+- [x] `make test` includes unit tests for migration decision logic (empty mountpoint, legacy content present, marker present, partial migration).
+- [x] `tasks/STATUS.md` updated with any known limitations.
 
 ## Notes / risks
 - macOS mount/unmount edge cases may require additional recovery logic; keep v1 behavior conservative.
 - Be careful to avoid traversing symlinks during migration.
+- We treat a stale `.ocpfs.sock` in the mountpoint as safe wrapper noise; anything else triggers migration.
