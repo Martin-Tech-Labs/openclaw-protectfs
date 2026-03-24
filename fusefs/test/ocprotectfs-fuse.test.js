@@ -197,6 +197,64 @@ test('ocprotectfs-fuse: best-effort real mount editor-style atomic save (workspa
   }
 });
 
+test('ocprotectfs-fuse: best-effort real mount temp/swap file patterns (workspace passthrough) (skipped in CI)', async (t) => {
+  if (!canAttemptRealMount()) {
+    t.skip('requires macOS + macFUSE + fuse-native');
+    return;
+  }
+
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'ocpfs-fuse-'));
+  const backstore = path.join(base, 'backstore');
+  const mountpoint = path.join(base, 'mountpoint');
+  fs.mkdirSync(backstore);
+  fs.mkdirSync(mountpoint);
+
+  const p = spawn(process.execPath, [FUSE_BIN, '--backstore', backstore, '--mountpoint', mountpoint], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  try {
+    await new Promise((resolve, reject) => {
+      const timeoutMs = 8000;
+      const tt = setTimeout(() => reject(new Error('timeout waiting for READY (mount)')), timeoutMs);
+      let buf = '';
+      p.stdout.on('data', (d) => {
+        buf += d.toString('utf8');
+        if (buf.includes('READY')) {
+          clearTimeout(tt);
+          resolve();
+        }
+      });
+      p.on('exit', (code) => {
+        if (code && code !== 0) {
+          clearTimeout(tt);
+          reject(new Error(`fuse process exited before READY (code=${code})`));
+        }
+      });
+    });
+
+    const workspaceDir = path.join(mountpoint, 'workspace');
+    fs.mkdirSync(workspaceDir, { recursive: true });
+
+    const patterns = ['.swp', '.DS_Store', '.~lock.note.txt#'];
+
+    for (const name of patterns) {
+      const fp = path.join(workspaceDir, name);
+      fs.writeFileSync(fp, `tmp:${name}`);
+      fsyncFileSafe(fp);
+      fs.unlinkSync(fp);
+      assert.equal(fs.existsSync(fp), false);
+
+      // Backstore should reflect the same final state (no stray temp files).
+      const backFp = path.join(backstore, 'workspace', name);
+      assert.equal(fs.existsSync(backFp), false);
+    }
+  } finally {
+    p.kill('SIGTERM');
+    await new Promise((resolve) => p.on('close', () => resolve()));
+  }
+});
+
 test('ocprotectfs-fuse: best-effort real mount encrypted-at-rest (skipped in CI)', async (t) => {
   if (!canAttemptRealMount()) {
     t.skip('requires macOS + macFUSE + fuse-native');
