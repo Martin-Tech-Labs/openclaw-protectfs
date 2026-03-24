@@ -1,9 +1,9 @@
 # STATUS
 
 ## Current (PLAN)
-- Plan task: 05-tests
-- Focus: tighten wrapper/FUSE lifecycle tests; add missing acceptance coverage.
-- Status: implemented wrapper lifecycle + liveness acceptance tests; `make test` passes.
+- Plan task: 06-migration-mount
+- Focus: safe migration of existing `~/.openclaw` content into backstore + mounting behavior.
+- Status: task doc drafted; implementation pending.
 
 ## Done / mostly done
 - PLAN 00-design: done (PR #2)
@@ -12,10 +12,10 @@
 - PLAN 02-fusefs-core: mostly done (PR #6)
   - gaps: confirm full required ops for OpenClaw behavior; add acceptance tests around allow/deny behavior.
 - PLAN 03-encryption: done (PR #8)
+- PLAN 05-tests: done (PR #16)
 - LEGACY 05-fail-closed-ready: done (PR #10)
 
 ## Next (PLAN)
-- 05-tests
 - 06-migration-mount
 - 07-hardening-owasp
 

@@ -55,6 +55,15 @@ test('run: requireFuseReady returns stable exit code even if shutdown times out'
   const code = await run(cfg);
   assert.equal(code, EXIT.FUSE_NOT_READY);
 
+  // Wait briefly for the fuse shim to write its pidfile. When `requireFuseReady`
+  // fails very quickly (and shutdown timeouts are tiny), some platforms can end
+  // up killing the child before the file hits disk.
+  for (let i = 0; i < 50; i++) {
+    if (fs.existsSync(fusePidFile)) break;
+    await sleep(5);
+  }
+  assert.ok(fs.existsSync(fusePidFile), `expected pidfile to exist: ${fusePidFile}`);
+
   const pid = Number(fs.readFileSync(fusePidFile, 'utf8'));
   // Even if the wrapper reports a stable code, it should have tried to kill fuse.
   for (let i = 0; i < 50; i++) {
