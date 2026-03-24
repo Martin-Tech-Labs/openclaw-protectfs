@@ -1,5 +1,8 @@
 # STATUS
 
+## V1
+- **V1 COMPLETE.** (Bookkeeping: this file + README explicitly declare completion.)
+
 ## Current (PLAN)
 - (none)
 
@@ -14,10 +17,8 @@
 - PLAN 13-macfuse-passthrough: done (PR #33)
 - PLAN 14-core-auth-crypto-wiring: done (PR #35)
 - PLAN 15-real-macfuse-acceptance-tests: implemented (real-mount tests are best-effort + skipped without prerequisites)
-- PLAN 01-wrapper: mostly done (PR #3, #4)
-  - gaps: document clean shutdown/unmount behavior; ensure wrapper owns mount lifecycle; add tests around lifecycle.
-- PLAN 02-fusefs-core: mostly done (PR #6)
-  - gaps: confirm full required ops for OpenClaw behavior; add acceptance tests around allow/deny behavior.
+- PLAN 01-wrapper: done (PR #3, #4 + follow-ons incl. PR #26, #28, #30)
+- PLAN 02-fusefs-core: done (PR #6 + acceptance tests PR #25)
 - PLAN 03-encryption: done (PR #8)
 - PLAN 05-tests: done (PR #16)
 - PLAN 06-migration-mount: done (PR #18)
