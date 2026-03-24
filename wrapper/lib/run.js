@@ -387,12 +387,22 @@ async function shutdownBoth({ fusePid, gatewayPid, timeoutMs, mountpoint }) {
   while (Date.now() < deadline) {
     const gwAlive = gatewayPid ? isAlive(gatewayPid) : false;
     const fuseAlive = fusePid ? isAlive(fusePid) : false;
-    if (!gwAlive && !fuseAlive) return;
+    if (!gwAlive && !fuseAlive) {
+      // Try again once processes have stopped; unmount is more likely to succeed
+      // after the FUSE daemon exits.
+      await bestEffortUnmount(mountpoint);
+      return;
+    }
     await sleep(50);
   }
 
   if (gatewayPid) terminateProcessGroup(gatewayPid, 'SIGKILL');
   if (fusePid) terminateProcessGroup(fusePid, 'SIGKILL');
+
+  // Give SIGKILL a brief moment to take effect, then try cleanup again.
+  await sleep(50);
+  await bestEffortUnmount(mountpoint);
+
   throw new Error('timeout waiting for children to exit');
 }
 

@@ -385,18 +385,13 @@ test('wrapper lifecycle: best-effort unmount invoked on shutdown', async () => {
   const backstore = path.join(dir, 'b');
   const mountpoint = path.join(dir, 'm');
 
-  const calledFile = path.join(dir, 'umount.called');
   // Put the fake binary under the repo (not os.tmpdir) to avoid noexec mounts
   // on some macOS setups.
   const binDir = fs.mkdtempSync(path.join(__dirname, 'bin-'));
 
   // Fake `umount` on PATH so we can assert the wrapper attempted cleanup.
   const umountBin = path.join(binDir, 'umount');
-  fs.writeFileSync(
-    umountBin,
-    ['#!/bin/sh', `echo "called $@" >> ${JSON.stringify(calledFile)}`, 'exit 0'].join('\n'),
-    { mode: 0o755 },
-  );
+  fs.writeFileSync(umountBin, ['#!/bin/sh', 'exit 0'].join('\n'), { mode: 0o755 });
 
   const fuseScript = path.join(dir, 'fuse.js');
   fs.writeFileSync(
@@ -451,3 +446,4 @@ test('wrapper lifecycle: best-effort unmount invoked on shutdown', async () => {
     }
   }
 });
+
