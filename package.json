@@ -9,5 +9,8 @@
   },
   "scripts": {
     "test": "node --test"
+  },
+  "optionalDependencies": {
+    "fuse-native": "2.2.6"
   }
 }
