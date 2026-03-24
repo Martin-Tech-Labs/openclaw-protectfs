@@ -3,11 +3,14 @@ const fs = require('node:fs');
 const path = require('node:path');
 const net = require('node:net');
 
+const { migrateLegacyOpenclaw } = require('./migrate');
+
 const EXIT = {
   OK: 0,
   CONFIG: 2,
   PREPARE_FS: 3,
   LIVENESS: 4,
+  MIGRATION: 5,
   FUSE_START: 10,
   FUSE_NOT_READY: 12,
   GATEWAY_START: 11,
@@ -156,6 +159,15 @@ async function run(cfg) {
     return EXIT.PREPARE_FS;
   }
 
+  // Task 06: migrate any legacy content out of the mountpoint before we mount
+  // over it (otherwise the data becomes hidden).
+  const mig = migrateLegacyOpenclaw({ mountpoint: cfg.mountpoint, backstore: cfg.backstore });
+  if (!mig.ok) {
+    log(`migration failed: ${mig.code}: ${mig.message}`);
+    return EXIT.MIGRATION;
+  }
+  if (mig.migrated) log(`migration complete: moved legacy mountpoint content to ${mig.legacyDir}`);
+
   // Task 05: liveness socket contract (v1)
   // - wrapper creates a unix socket in the mountpoint
   // - wrapper passes its path to both fuse and gateway via env
@@ -295,9 +307,18 @@ async function shutdownBoth(fusePid, gatewayPid, timeoutMs) {
 }
 
 function terminateProcessGroup(pid, sig) {
+  // Best-effort: try process group first (detached children), then fall back to
+  // direct PID kill in case the platform did not create a new group.
   try {
     // Negative PID targets the process group when the child is spawned detached.
     process.kill(-pid, sig);
+    return;
+  } catch (_) {
+    // fall through
+  }
+
+  try {
+    process.kill(pid, sig);
   } catch (_) {
     // ignore
   }
