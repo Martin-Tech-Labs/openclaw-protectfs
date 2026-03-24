@@ -346,7 +346,7 @@ test('wrapper lifecycle: gateway exit triggers fuse shutdown (EXIT.GATEWAY_DIED)
   let fusePid = null;
 
   try {
-    await waitForFile(fusePidFile, { proc: wrapper, captureLabel: buf });
+    await waitForFile(fusePidFile, { proc: wrapper, capture: () => buf });
     fusePid = Number(fs.readFileSync(fusePidFile, 'utf8'));
 
     const exit = await new Promise((resolve) => wrapper.once('exit', (code, signal) => resolve({ code, signal })));
