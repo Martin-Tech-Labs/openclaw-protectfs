@@ -87,18 +87,69 @@ function validateConfig(cfg) {
     throw new Error('shutdown-timeout-ms must be > 0');
 }
 
+function assertNoSymlinkParents(absPath) {
+  if (!path.isAbsolute(absPath)) throw new Error(`path must be absolute: ${absPath}`);
+
+  const root = path.parse(absPath).root;
+  // Walk from the root down, checking each existing path component.
+  const rel = absPath.slice(root.length);
+  const parts = rel.split(path.sep).filter(Boolean);
+
+  let cur = root;
+  for (const part of parts) {
+    cur = path.join(cur, part);
+    try {
+      const st = fs.lstatSync(cur);
+      if (st.isSymbolicLink()) {
+        // macOS has historical symlinks like /var -> /private/var. These are
+        // stable system paths and commonly appear in temp directories.
+        // We still reject symlinks in user-controlled path components.
+        if (cur === '/var' || cur === '/tmp') continue;
+        throw new Error(`refusing symlink path component: ${cur}`);
+      }
+    } catch (e) {
+      if (e && e.code === 'ENOENT') return;
+      throw e;
+    }
+  }
+}
+
 function prepareDir(p, mode) {
   if (!path.isAbsolute(p)) throw new Error(`path must be absolute: ${p}`);
   const clean = path.resolve(p);
+
+  // Hardening: reject symlinks anywhere in the path, not just the leaf.
+  assertNoSymlinkParents(clean);
 
   try {
     const st = fs.lstatSync(clean);
     if (st.isSymbolicLink()) throw new Error(`refusing symlink path: ${clean}`);
     if (!st.isDirectory()) throw new Error(`path exists but is not a directory: ${clean}`);
+
+    // Hardening: refuse overly-permissive directories (group/world writable).
+    if ((st.mode & 0o022) !== 0) throw new Error(`refusing group/world-writable directory: ${clean}`);
+
+    // Best-effort: ensure directory is at least as strict as requested.
+    if (Number.isFinite(mode)) {
+      try {
+        fs.chmodSync(clean, mode);
+      } catch (_) {
+        // ignore
+      }
+    }
+
     return;
   } catch (err) {
     if (err && err.code === 'ENOENT') {
       fs.mkdirSync(clean, { recursive: true, mode });
+      // Ensure final perms aren't widened by umask.
+      if (Number.isFinite(mode)) {
+        try {
+          fs.chmodSync(clean, mode);
+        } catch (_) {
+          // ignore
+        }
+      }
       return;
     }
     throw err;

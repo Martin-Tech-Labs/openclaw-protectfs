@@ -31,13 +31,36 @@ test('prepareDir: creates directory when missing', () => {
   assert.equal(st.isDirectory(), true);
 });
 
-test('prepareDir: rejects symlink', () => {
+test('prepareDir: rejects symlink leaf', () => {
   const base = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'ocpfs-'));
   const target = path.join(base, 'target');
   fs.mkdirSync(target);
   const link = path.join(base, 'link');
   fs.symlinkSync(target, link);
   assert.throws(() => prepareDir(link, 0o700), /refusing symlink/);
+});
+
+test('prepareDir: rejects symlink parent component (prevents mkdir following symlink)', () => {
+  const base = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'ocpfs-'));
+  const real = path.join(base, 'real');
+  fs.mkdirSync(real);
+
+  const link = path.join(base, 'link');
+  fs.symlinkSync(real, link);
+
+  // Attempt to create a subdir beneath the symlink.
+  const p = path.join(link, 'subdir');
+  assert.throws(() => prepareDir(p, 0o700), /symlink path component/);
+});
+
+test('prepareDir: rejects existing group/world-writable directory', () => {
+  const base = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'ocpfs-'));
+  const p = path.join(base, 'open');
+  fs.mkdirSync(p, { mode: 0o777 });
+  // Ensure mode is actually widened despite umask.
+  fs.chmodSync(p, 0o777);
+
+  assert.throws(() => prepareDir(p, 0o700), /group\/world-writable/);
 });
 
 test('prepareDir: rejects non-absolute path', () => {
