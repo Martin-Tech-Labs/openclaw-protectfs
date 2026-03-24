@@ -52,6 +52,7 @@ function parseArgs(argv) {
       case '--gateway-arg':
         cfg.gatewayArgs.push(next());
         break;
+      case '--shutdown-timeout':
       case '--shutdown-timeout-ms':
         cfg.shutdownTimeoutMs = Number(next());
         break;
@@ -86,7 +87,7 @@ Flags:
   --gateway-bin <path>         Gateway binary (placeholder in Task 02)
   --gateway-arg <arg>          Gateway arg (repeatable)
 
-  --shutdown-timeout-ms <ms>   Grace period for shutdown (default 5000)
+  --shutdown-timeout <ms>      Grace period for shutdown (default 5000)
   -h, --help                   Show help
 `);
 }
