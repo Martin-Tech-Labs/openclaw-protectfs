@@ -40,3 +40,7 @@ Wire the existing `core-v1` (authorization checks) and `crypto-v1` (encrypted-at
 ## Notes / risks
 - Careful with errno mapping: operations must return correct negative errno values to avoid confusing apps.
 - Avoid exposing any decrypted bytes to disk (temporary files) during read/write.
+- Current wiring uses env-based stubs for v1 bring-up:
+  - `OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1` gates encrypted-path access (default deny).
+  - `OCPROTECTFS_KEK_B64` provides the 32-byte KEK (base64) for decrypt/encrypt.
+- Encrypted file content is stored at the same relative backstore path as ciphertext, with a sidecar wrapped-DEK at `*.ocpfs.dek`.

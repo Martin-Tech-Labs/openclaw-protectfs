@@ -1,14 +1,26 @@
 #!/usr/bin/env node
 
-// Task 13: minimal macFUSE passthrough mount using `fuse-native`.
+// Task 14: macFUSE mount wiring for policy-v1 + core-v1 authZ + crypto-v1 encrypted-at-rest.
 //
 // Contract with wrapper:
 // - print a single line "READY" only after a successful mount
 // - remain alive until terminated, and attempt a clean unmount on SIGINT/SIGTERM
+//
+// v1 policy summary:
+// - workspace/** + workspace-joao/** => plaintext passthrough
+// - everything else => encrypted-at-rest, and requires gateway access checks
+//
+// IMPORTANT SECURITY DEFAULTS:
+// - fail closed: encrypted paths require OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1
+// - encrypted paths also require a KEK via OCPROTECTFS_KEK_B64 (32-byte key, base64)
 
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
+
+const { OPS, authorizeOp } = require('./lib/core-v1');
+const { classifyPath } = require('./lib/policy-v1');
+const { readEncryptedFile, writeEncryptedFile, sidecarDekPath } = require('./lib/encrypted-file-v1');
 
 function defaultBackstore() {
   return path.join(os.homedir(), '.openclaw.real');
@@ -53,7 +65,7 @@ function parseArgs(argv) {
 }
 
 function printHelp() {
-  console.log(`ocprotectfs-fuse (Task 13: fuse-native passthrough)
+  console.log(`ocprotectfs-fuse (Task 14: policy/auth/crypto wiring)
 
 Usage:
   ocprotectfs-fuse [flags]
@@ -62,6 +74,10 @@ Flags:
   --backstore <path>   Backstore directory (default ~/.openclaw.real)
   --mountpoint <path>  Mountpoint directory (default ~/.openclaw)
   -h, --help           Show help
+
+Environment:
+  OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1  Allow encrypted-path operations (fail-closed default deny)
+  OCPROTECTFS_KEK_B64=<base64>          32-byte KEK, base64-encoded (required for encrypted paths)
 `);
 }
 
@@ -96,18 +112,21 @@ function toRealPath(backstoreRoot, fusePath) {
   return real;
 }
 
+function toRel(fusePath) {
+  if (fusePath === '/') return '.';
+  return fusePath.startsWith('/') ? fusePath.slice(1) : fusePath;
+}
+
+
 function errnoCode(err, Fuse) {
   if (!err) return 0;
 
-  // Prefer Fuse's explicit errno mapping when available.
   if (Fuse && err.code && typeof Fuse[err.code] === 'number') {
     return -Fuse[err.code];
   }
 
-  // Node often provides a negative errno already.
   if (typeof err.errno === 'number') return err.errno;
 
-  // Fallback: generic failure.
   return -1;
 }
 
@@ -124,6 +143,37 @@ function loadFuseNative() {
   }
 }
 
+function parseKeyFromEnvB64(name) {
+  const v = process.env[name];
+  if (!v) return null;
+  const buf = Buffer.from(String(v), 'base64');
+  return buf;
+}
+
+function makeAuthz({ gatewayAccessAllowed }) {
+  return ({ op, rel }) => {
+    try {
+      const res = authorizeOp({ op, rel, gatewayAccessAllowed });
+      if (res.ok) return { ok: true };
+      const err = new Error(res.reason);
+      err.code = res.code;
+      return { ok: false, err };
+    } catch (e) {
+      const err = new Error(e && e.message ? e.message : String(e));
+      err.code = 'EACCES';
+      return { ok: false, err };
+    }
+  };
+}
+
+function flagRequiresWrite(flags) {
+  // Node's flags are numeric and align with libc O_*.
+  // Any write-capable open should require WRITE auth.
+  const { O_WRONLY, O_RDWR } = fs.constants;
+  const accMode = flags & 3; // O_ACCMODE == 3
+  return accMode === O_WRONLY || accMode === O_RDWR;
+}
+
 function main() {
   const cfg = parseArgs(process.argv);
 
@@ -134,6 +184,16 @@ function main() {
 
   const Fuse = loadFuseNative();
 
+  const gatewayAccessAllowed = process.env.OCPROTECTFS_GATEWAY_ACCESS_ALLOWED === '1';
+  const kek = parseKeyFromEnvB64('OCPROTECTFS_KEK_B64');
+  if (kek && kek.length !== 32) throw new Error('OCPROTECTFS_KEK_B64 must decode to 32 bytes');
+
+  const authz = makeAuthz({ gatewayAccessAllowed });
+
+  // FUSE handle table.
+  let nextHandle = 10;
+  const handles = new Map();
+
   const rp = (p, cb) => {
     try {
       return toRealPath(backstore, p);
@@ -143,11 +203,55 @@ function main() {
     }
   };
 
+  const authorizeFusePath = (op, fusePath, cb) => {
+    const rel = toRel(fusePath);
+    const res = authz({ op, rel });
+    if (!res.ok) {
+      cb(errnoCode(res.err, Fuse));
+      return null;
+    }
+    return classifyPath(rel);
+  };
+
+  async function loadEncryptedHandle({ real, flags, createIfMissing }) {
+    if (!kek) {
+      const err = new Error('missing KEK for encrypted paths');
+      err.code = 'EACCES';
+      throw err;
+    }
+
+    const { dek, plaintext } = readEncryptedFile({ kek, realPath: real, createIfMissing });
+
+    // O_TRUNC => truncate plaintext.
+    const truncated = (flags & fs.constants.O_TRUNC) !== 0;
+
+    return {
+      kind: 'encrypted',
+      real,
+      dek,
+      buf: truncated ? Buffer.alloc(0) : plaintext,
+      flags,
+      dirty: truncated,
+    };
+  }
+
+  async function flushEncryptedHandle(h) {
+    if (!h.dirty) return;
+    writeEncryptedFile({ dek: h.dek, realPath: h.real, plaintext: h.buf });
+    h.dirty = false;
+  }
+
   const ops = {
-    // getattr must support both files and dirs.
     getattr: (p, cb) => {
+      const cls = authorizeFusePath(OPS.READ, p, cb);
+      if (!cls) return;
+
       const real = rp(p, cb);
       if (!real) return;
+
+      // Hide DEK sidecars from the mounted FS.
+      if (real.endsWith('.ocpfs.dek')) return cb(-Fuse.ENOENT);
+
       fs.lstat(real, (err, st) => {
         if (err) return cb(errnoCode(err, Fuse));
         return cb(0, st);
@@ -155,75 +259,205 @@ function main() {
     },
 
     readdir: (p, cb) => {
+      const cls = authorizeFusePath(OPS.READ, p, cb);
+      if (!cls) return;
+
       const real = rp(p, cb);
       if (!real) return;
       fs.readdir(real, (err, entries) => {
         if (err) return cb(errnoCode(err, Fuse));
-        return cb(0, entries);
+        const filtered = entries.filter((e) => !String(e).endsWith('.ocpfs.dek'));
+        return cb(0, filtered);
       });
     },
 
     open: (p, flags, cb) => {
+      const op = flagRequiresWrite(flags) ? OPS.WRITE : OPS.READ;
+      const cls = authorizeFusePath(op, p, cb);
+      if (!cls) return;
+
       const real = rp(p, cb);
       if (!real) return;
-      fs.open(real, flags, (err, fd) => {
-        if (err) return cb(errnoCode(err, Fuse));
-        return cb(0, fd);
-      });
-    },
 
-    release: (p, fd, cb) => {
-      fs.close(fd, (err) => {
-        if (err) return cb(errnoCode(err, Fuse));
-        return cb(0);
-      });
-    },
+      if (cls.storage === 'plaintext') {
+        fs.open(real, flags, (err, fd) => {
+          if (err) return cb(errnoCode(err, Fuse));
+          const handle = nextHandle++;
+          handles.set(handle, { kind: 'plaintext', fd, real, flags });
+          return cb(0, handle);
+        });
+        return;
+      }
 
-    read: (p, fd, buf, len, pos, cb) => {
-      fs.read(fd, buf, 0, len, pos, (err, bytesRead) => {
-        if (err) return cb(errnoCode(err, Fuse));
-        return cb(bytesRead);
-      });
-    },
-
-    write: (p, fd, buf, len, pos, cb) => {
-      fs.write(fd, buf, 0, len, pos, (err, bytesWritten) => {
-        if (err) return cb(errnoCode(err, Fuse));
-        return cb(bytesWritten);
-      });
+      // encrypted
+      try {
+        const h = loadEncryptedHandle({ real, flags, createIfMissing: false });
+        Promise.resolve(h)
+          .then((eh) => {
+            const handle = nextHandle++;
+            handles.set(handle, eh);
+            cb(0, handle);
+          })
+          .catch((e) => cb(errnoCode(e, Fuse)));
+      } catch (e) {
+        cb(errnoCode(e, Fuse));
+      }
     },
 
     create: (p, mode, cb) => {
+      const cls = authorizeFusePath(OPS.CREATE, p, cb);
+      if (!cls) return;
+
       const real = rp(p, cb);
       if (!real) return;
+
       const flags = fs.constants.O_CREAT | fs.constants.O_TRUNC | fs.constants.O_RDWR;
-      fs.open(real, flags, mode, (err, fd) => {
-        if (err) return cb(errnoCode(err, Fuse));
-        return cb(0, fd);
-      });
+
+      if (cls.storage === 'plaintext') {
+        fs.open(real, flags, mode, (err, fd) => {
+          if (err) return cb(errnoCode(err, Fuse));
+          const handle = nextHandle++;
+          handles.set(handle, { kind: 'plaintext', fd, real, flags });
+          return cb(0, handle);
+        });
+        return;
+      }
+
+      // encrypted
+      Promise.resolve(loadEncryptedHandle({ real, flags, createIfMissing: true }))
+        .then((eh) => {
+          eh.dirty = true; // new file => ensure it hits disk
+          const handle = nextHandle++;
+          handles.set(handle, eh);
+          cb(0, handle);
+        })
+        .catch((e) => cb(errnoCode(e, Fuse)));
+    },
+
+    release: (p, handle, cb) => {
+      const h = handles.get(handle);
+      handles.delete(handle);
+      if (!h) return cb(0);
+
+      if (h.kind === 'plaintext') {
+        fs.close(h.fd, (err) => {
+          if (err) return cb(errnoCode(err, Fuse));
+          return cb(0);
+        });
+        return;
+      }
+
+      Promise.resolve()
+        .then(() => flushEncryptedHandle(h))
+        .then(() => cb(0))
+        .catch((e) => cb(errnoCode(e, Fuse)));
+    },
+
+    read: (p, handle, buf, len, pos, cb) => {
+      const h = handles.get(handle);
+      if (!h) return cb(-Fuse.EBADF);
+
+      if (h.kind === 'plaintext') {
+        fs.read(h.fd, buf, 0, len, pos, (err, bytesRead) => {
+          if (err) return cb(errnoCode(err, Fuse));
+          return cb(bytesRead);
+        });
+        return;
+      }
+
+      const end = Math.min(h.buf.length, pos + len);
+      const slice = pos >= h.buf.length ? Buffer.alloc(0) : h.buf.subarray(pos, end);
+      slice.copy(buf);
+      return cb(slice.length);
+    },
+
+    write: (p, handle, buf, len, pos, cb) => {
+      const h = handles.get(handle);
+      if (!h) return cb(-Fuse.EBADF);
+
+      if (h.kind === 'plaintext') {
+        fs.write(h.fd, buf, 0, len, pos, (err, bytesWritten) => {
+          if (err) return cb(errnoCode(err, Fuse));
+          return cb(bytesWritten);
+        });
+        return;
+      }
+
+      const needed = pos + len;
+      if (needed > h.buf.length) {
+        const next = Buffer.alloc(needed);
+        h.buf.copy(next, 0, 0, h.buf.length);
+        h.buf = next;
+      }
+      buf.subarray(0, len).copy(h.buf, pos);
+      h.dirty = true;
+      return cb(len);
     },
 
     unlink: (p, cb) => {
+      const cls = authorizeFusePath(OPS.UNLINK, p, cb);
+      if (!cls) return;
+
       const real = rp(p, cb);
       if (!real) return;
-      fs.unlink(real, (err) => {
+
+      const finish = (err) => {
         if (err) return cb(errnoCode(err, Fuse));
         return cb(0);
+      };
+
+      if (cls.storage === 'plaintext') {
+        fs.unlink(real, finish);
+        return;
+      }
+
+      // encrypted: delete content and DEK sidecar
+      fs.unlink(real, (err) => {
+        if (err) return finish(err);
+        fs.unlink(sidecarDekPath(real), (_) => finish(null));
       });
     },
 
     rename: (src, dest, cb) => {
+      // enforce both paths
+      const srcCls = authorizeFusePath(OPS.RENAME, src, cb);
+      if (!srcCls) return;
+      const destCls = authorizeFusePath(OPS.RENAME, dest, cb);
+      if (!destCls) return;
+
       const realSrc = rp(src, cb);
       if (!realSrc) return;
       const realDest = rp(dest, cb);
       if (!realDest) return;
+
       fs.rename(realSrc, realDest, (err) => {
         if (err) return cb(errnoCode(err, Fuse));
+
+        // If either side is encrypted, keep sidecars in sync.
+        // - encrypted->encrypted: move sidecar
+        // - encrypted->plaintext or plaintext->encrypted: deny (policy mismatch)
+        if (srcCls.storage !== destCls.storage) {
+          const e = new Error('cannot rename across plaintext/encrypted boundary');
+          e.code = 'EACCES';
+          return cb(errnoCode(e, Fuse));
+        }
+
+        if (srcCls.storage === 'encrypted') {
+          fs.rename(sidecarDekPath(realSrc), sidecarDekPath(realDest), (e2) => {
+            if (e2 && e2.code !== 'ENOENT') return cb(errnoCode(e2, Fuse));
+            return cb(0);
+          });
+          return;
+        }
+
         return cb(0);
       });
     },
 
     mkdir: (p, mode, cb) => {
+      const cls = authorizeFusePath(OPS.MKDIR, p, cb);
+      if (!cls) return;
+
       const real = rp(p, cb);
       if (!real) return;
       fs.mkdir(real, { mode }, (err) => {
@@ -233,6 +467,9 @@ function main() {
     },
 
     rmdir: (p, cb) => {
+      const cls = authorizeFusePath(OPS.RMDIR, p, cb);
+      if (!cls) return;
+
       const real = rp(p, cb);
       if (!real) return;
       fs.rmdir(real, (err) => {
@@ -242,12 +479,31 @@ function main() {
     },
 
     truncate: (p, size, cb) => {
+      const cls = authorizeFusePath(OPS.WRITE, p, cb);
+      if (!cls) return;
+
       const real = rp(p, cb);
       if (!real) return;
-      fs.truncate(real, size, (err) => {
-        if (err) return cb(errnoCode(err, Fuse));
-        return cb(0);
-      });
+
+      if (cls.storage === 'plaintext') {
+        fs.truncate(real, size, (err) => {
+          if (err) return cb(errnoCode(err, Fuse));
+          return cb(0);
+        });
+        return;
+      }
+
+      // encrypted: load, resize, flush
+      Promise.resolve(loadEncryptedHandle({ real, flags: fs.constants.O_RDWR, createIfMissing: false }))
+        .then((h) => {
+          const next = Buffer.alloc(Number(size));
+          h.buf.subarray(0, Math.min(h.buf.length, next.length)).copy(next);
+          h.buf = next;
+          h.dirty = true;
+          return flushEncryptedHandle(h);
+        })
+        .then(() => cb(0))
+        .catch((e) => cb(errnoCode(e, Fuse)));
     },
 
     // Called on mount.
@@ -255,7 +511,6 @@ function main() {
   };
 
   const fuse = new Fuse(mountpoint, ops, {
-    // Keep this minimal; wrapper owns UX.
     displayFolder: mountpoint,
     force: false,
   });
@@ -263,7 +518,7 @@ function main() {
   let mounted = false;
   let shuttingDown = false;
 
-  const shutdown = (signal) => {
+  const shutdown = () => {
     if (shuttingDown) return;
     shuttingDown = true;
 
@@ -275,7 +530,6 @@ function main() {
     try {
       fuse.unmount((err) => {
         if (err) {
-          // Best effort; don't hang.
           process.stderr.write(`error: unmount failed: ${err.message || String(err)}\n`);
         }
         process.exit(0);

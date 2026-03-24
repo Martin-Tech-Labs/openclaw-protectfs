@@ -73,14 +73,22 @@ test('ocprotectfs-fuse: best-effort real mount passthrough (skipped in CI)', asy
       });
     });
 
-    // Minimal passthrough check: write via mountpoint, read from backstore.
-    const rel = 'hello.txt';
+    // Policy wiring check:
+    // - workspace/** is plaintext passthrough
+    // - other paths are fail-closed (deny) unless gateway+KEK are provided
+
+    const rel = path.join('workspace', 'hello.txt');
     const mountFile = path.join(mountpoint, rel);
     const backFile = path.join(backstore, rel);
 
+    fs.mkdirSync(path.join(mountpoint, 'workspace'), { recursive: true });
     fs.writeFileSync(mountFile, 'hi from fuse');
+
     const back = fs.readFileSync(backFile, 'utf8');
     assert.equal(back, 'hi from fuse');
+
+    // Encrypted-by-policy paths should deny by default (fail closed).
+    assert.throws(() => fs.writeFileSync(path.join(mountpoint, 'secret.txt'), 'nope'), /EACCES|operation not permitted/i);
   } finally {
     // terminate cleanly
     p.kill('SIGTERM');
