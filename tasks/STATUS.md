@@ -1,12 +1,13 @@
 # STATUS
 
 ## Current
-- Task: 01-design
-- PR: (open)
-- Review rounds: 0/2
+- Task: 02-wrapper-skeleton
+- Task file: `tasks/02-wrapper-skeleton.md`
+
+## Done
+- 01-design (merged; PR #2)
 
 ## Next
-- 02-wrapper-skeleton
 - 03-fusefs-skeleton
 - 04-encryption-impl
 

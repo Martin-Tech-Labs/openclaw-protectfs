@@ -1,0 +1,163 @@
+const { spawn } = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const EXIT = {
+  OK: 0,
+  CONFIG: 2,
+  PREPARE_FS: 3,
+  FUSE_START: 10,
+  GATEWAY_START: 11,
+  FUSE_DIED: 20,
+  GATEWAY_DIED: 21,
+  SHUTDOWN: 30,
+};
+
+function log(msg) {
+  const ts = new Date().toISOString();
+  process.stderr.write(`${ts} ${msg}\n`);
+}
+
+function validateConfig(cfg) {
+  if (!cfg) throw new Error('config missing');
+  if (!cfg.backstore || !cfg.mountpoint) throw new Error('backstore and mountpoint must be set');
+  if (!cfg.fuseBin) throw new Error('fuse-bin must be set');
+  if (!cfg.gatewayBin) throw new Error('gateway-bin must be set');
+  if (!Number.isFinite(cfg.shutdownTimeoutMs) || cfg.shutdownTimeoutMs <= 0)
+    throw new Error('shutdown-timeout-ms must be > 0');
+}
+
+function prepareDir(p, mode) {
+  if (!path.isAbsolute(p)) throw new Error(`path must be absolute: ${p}`);
+  const clean = path.resolve(p);
+
+  try {
+    const st = fs.lstatSync(clean);
+    if (st.isSymbolicLink()) throw new Error(`refusing symlink path: ${clean}`);
+    if (!st.isDirectory()) throw new Error(`path exists but is not a directory: ${clean}`);
+    return;
+  } catch (err) {
+    if (err && err.code === 'ENOENT') {
+      fs.mkdirSync(clean, { recursive: true, mode });
+      return;
+    }
+    throw err;
+  }
+}
+
+async function run(cfg) {
+  validateConfig(cfg);
+
+  log('ocprotectfs: NOTE: Task 02 skeleton; fail-closed enforcement is TODO');
+
+  try {
+    prepareDir(cfg.backstore, 0o700);
+    prepareDir(cfg.mountpoint, 0o700);
+  } catch (e) {
+    log(`prepare dirs failed: ${e.message}`);
+    return EXIT.PREPARE_FS;
+  }
+
+  const fuse = spawn(cfg.fuseBin, cfg.fuseArgs, { stdio: 'inherit', detached: true });
+  fuse.unref();
+  log(`starting fuse: ${cfg.fuseBin} ${cfg.fuseArgs.join(' ')}`);
+
+  if (!fuse.pid) return EXIT.FUSE_START;
+  log(`fuse started pid=${fuse.pid}`);
+
+  // In later tasks, wait for actual mount readiness.
+  await sleep(150);
+
+  const gateway = spawn(cfg.gatewayBin, cfg.gatewayArgs, { stdio: 'inherit', detached: true });
+  gateway.unref();
+  log(`starting gateway: ${cfg.gatewayBin} ${cfg.gatewayArgs.join(' ')}`);
+  if (!gateway.pid) {
+    await shutdownBoth(fuse.pid, null, cfg.shutdownTimeoutMs);
+    return EXIT.GATEWAY_START;
+  }
+  log(`gateway started pid=${gateway.pid}`);
+
+  return await supervise(fuse, gateway, cfg.shutdownTimeoutMs);
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function supervise(fuse, gateway, timeoutMs) {
+  let done = false;
+
+  const onSignal = async (sig) => {
+    if (done) return;
+    done = true;
+    log(`signal ${sig} received; shutting down`);
+    try {
+      await shutdownBoth(fuse.pid, gateway.pid, timeoutMs);
+      process.exit(EXIT.OK);
+    } catch (e) {
+      log(`shutdown error: ${e.message}`);
+      process.exit(EXIT.SHUTDOWN);
+    }
+  };
+
+  process.once('SIGINT', () => onSignal('SIGINT'));
+  process.once('SIGTERM', () => onSignal('SIGTERM'));
+
+  const fuseExit = onceExit(fuse, 'fuse');
+  const gwExit = onceExit(gateway, 'gateway');
+
+  const first = await Promise.race([fuseExit, gwExit]);
+  if (done) return EXIT.OK;
+  done = true;
+
+  log(`${first.name} exited (code=${first.code}); shutting down`);
+  await shutdownBoth(fuse.pid, gateway.pid, timeoutMs);
+  return first.name === 'fuse' ? EXIT.FUSE_DIED : EXIT.GATEWAY_DIED;
+}
+
+function onceExit(child, name) {
+  return new Promise((resolve) => {
+    child.once('exit', (code, signal) => {
+      if (signal) return resolve({ name, code: 128 });
+      resolve({ name, code: Number.isFinite(code) ? code : 0 });
+    });
+  });
+}
+
+async function shutdownBoth(fusePid, gatewayPid, timeoutMs) {
+  // TODO (Task 03+): unmount mountpoint cleanly.
+  if (gatewayPid) terminateProcessGroup(gatewayPid, 'SIGTERM');
+  if (fusePid) terminateProcessGroup(fusePid, 'SIGTERM');
+
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const gwAlive = gatewayPid ? isAlive(gatewayPid) : false;
+    const fuseAlive = fusePid ? isAlive(fusePid) : false;
+    if (!gwAlive && !fuseAlive) return;
+    await sleep(50);
+  }
+
+  if (gatewayPid) terminateProcessGroup(gatewayPid, 'SIGKILL');
+  if (fusePid) terminateProcessGroup(fusePid, 'SIGKILL');
+  throw new Error('timeout waiting for children to exit');
+}
+
+function terminateProcessGroup(pid, sig) {
+  try {
+    // Negative PID targets the process group when the child is spawned detached.
+    process.kill(-pid, sig);
+  } catch (_) {
+    // ignore
+  }
+}
+
+function isAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+module.exports = { run, validateConfig, prepareDir, EXIT };
