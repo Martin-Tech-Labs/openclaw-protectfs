@@ -10,7 +10,7 @@ This is a step towards the wrapper being a real root-of-trust.
   - [ ] `--require-fuse-ready` (default: off to preserve skeleton placeholder behavior)
   - [ ] `--fuse-ready-timeout-ms <ms>` to configure the readiness wait
 - [ ] When `--require-fuse-ready` is enabled and readiness is not detected within the timeout:
-  - [ ] wrapper terminates the FUSE process and exits with a stable non-zero exit code
+  - [ ] wrapper terminates the FUSE process and exits with a stable non-zero exit code (EXIT.FUSE_NOT_READY = 12)
   - [ ] gateway is **not** started
 - [ ] Unit tests cover `waitForReady` behavior for:
   - [ ] ready detected
