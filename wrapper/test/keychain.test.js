@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { InMemoryKeychain, MacOSSecurityCliKeychain, getOrCreateKey32 } = require('../src/keychain');
+const { InMemoryKeychain, MacOSSecurityCliKeychain, MacOSSwiftKeychain, getOrCreateKey32 } = require('../src/keychain');
 
 function fixedKey32(byte) {
   return Buffer.alloc(32, byte);
@@ -115,6 +115,65 @@ test('keychain: MacOSSecurityCliKeychain returns null when missing item', async 
 
 test('keychain: MacOSSecurityCliKeychain refuses non-darwin platform', async () => {
   const kc = new MacOSSecurityCliKeychain({ platform: 'linux' });
+  await assert.rejects(
+    () => kc.getGenericPassword({ service: 'ocprotectfs', account: 'kek' }),
+    /requires macOS/,
+  );
+});
+
+test('keychain: MacOSSwiftKeychain get/set via injected exec + darwin platform', async () => {
+  const calls = [];
+  /** @type {Map<string, Buffer>} */
+  const store = new Map();
+
+  const execFileSync = (bin, args, opts) => {
+    calls.push({ bin, args, opts });
+
+    // args: [script, cmd, ...]
+    const cmd = args[1];
+
+    const svcIdx = args.indexOf('--service');
+    const accIdx = args.indexOf('--account');
+    const service = args[svcIdx + 1];
+    const account = args[accIdx + 1];
+
+    if (cmd === 'set') {
+      const dataIdx = args.indexOf('--data-b64');
+      const b64 = args[dataIdx + 1];
+      store.set(`${service}::${account}`, Buffer.from(b64, 'utf8'));
+      return Buffer.from('{"ok":true}');
+    }
+
+    if (cmd === 'get') {
+      const b64 = store.get(`${service}::${account}`);
+      if (!b64) return Buffer.from('{"dataB64":null}');
+      return Buffer.from(JSON.stringify({ dataB64: b64.toString('utf8') }));
+    }
+
+    throw new Error(`unexpected swift args: ${args.join(' ')}`);
+  };
+
+  const kc = new MacOSSwiftKeychain({
+    swiftBin: 'swift',
+    scriptPath: '/tmp/generic_keychain.swift',
+    execFileSync,
+    platform: () => 'darwin',
+  });
+
+  const secret = Buffer.from('hello\u0000world', 'utf8');
+  await kc.setGenericPassword({ service: 'ocprotectfs', account: 'kek', secret });
+
+  const out = await kc.getGenericPassword({ service: 'ocprotectfs', account: 'kek' });
+  assert.equal(Buffer.isBuffer(out), true);
+  assert.equal(out.toString('utf8'), secret.toString('utf8'));
+
+  assert.equal(calls[0].bin, 'swift');
+  assert.equal(calls[0].args[1], 'set');
+  assert.equal(calls[1].args[1], 'get');
+});
+
+test('keychain: MacOSSwiftKeychain refuses non-darwin platform', async () => {
+  const kc = new MacOSSwiftKeychain({ platform: 'linux', execFileSync: () => Buffer.from('') });
   await assert.rejects(
     () => kc.getGenericPassword({ service: 'ocprotectfs', account: 'kek' }),
     /requires macOS/,

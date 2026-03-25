@@ -44,32 +44,16 @@ Notes:
 - The wrapper passes the KEK to the FUSE daemon **in-memory via an anonymous pipe** (no env secret).
 - For a real deployment, replace the dummy gateway with the command that runs your OpenClaw gateway in the foreground.
 
-Optional (recommended for ops clarity): **pre-create / reset the KEK in Keychain**.
+Optional (advanced): **reset the KEK in Keychain**.
 
-The wrapper will auto-create the item if missing, but being explicit makes bring-up and troubleshooting easier.
+By default, the wrapper will **create and manage** the KEK Keychain item automatically on first run.
+On macOS, it uses native Keychain APIs (via a small Swift helper) and configures the item to require **interactive user presence** (Touch ID / password) when accessed.
+
+If you need to rotate/reset the KEK (this will make existing encrypted data unreadable unless you also rotate/re-encrypt DEKs), you can delete the item:
 
 ```bash
-# 1) Generate a fresh 32-byte random key, stored as base64 text
-KEK_B64="$(python3 - <<'PY'
-import os, base64
-print(base64.b64encode(os.urandom(32)).decode())
-PY
-)"
-
-# 2) Store it in the *login* Keychain as a generic password item
-security add-generic-password -U -s ocprotectfs -a kek -w "$KEK_B64"
-
-# 3) Verify it round-trips to 32 bytes
-python3 - <<'PY'
-import base64, subprocess
-b64 = subprocess.check_output(['security','find-generic-password','-s','ocprotectfs','-a','kek','-w']).decode().strip()
-b = base64.b64decode(b64)
-print('OK' if len(b)==32 else f'BAD length: {len(b)}')
-PY
-
-# If you need to rotate/reset:
-# security delete-generic-password -s ocprotectfs -a kek
-# (then re-run the add-generic-password command above)
+# Danger: rotating the KEK breaks decryption of previously-encrypted data.
+security delete-generic-password -s ocprotectfs -a kek
 ```
 
 4) Quick verify (plaintext vs ciphertext):

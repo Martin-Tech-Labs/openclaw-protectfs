@@ -1,6 +1,6 @@
 const crypto = require('node:crypto');
 
-const { MacOSSecurityCliKeychain, getOrCreateKey32 } = require('./keychain');
+const { MacOSSecurityCliKeychain, MacOSSwiftKeychain, getOrCreateKey32 } = require('./keychain');
 const { resolveKekV2 } = require('./kek-v2');
 const { MacOSKeychainRsaKeywrapAdapter } = require('./keywrap-keychain');
 
@@ -51,7 +51,12 @@ async function resolveKek(args = {}) {
     const keychainFactory =
       args.keychainFactory ||
       (() => {
-        return new MacOSSecurityCliKeychain();
+        // Prefer native Keychain APIs via Swift; fall back to `security` CLI if unavailable.
+        try {
+          return new MacOSSwiftKeychain();
+        } catch (e) {
+          return new MacOSSecurityCliKeychain();
+        }
       });
     keychain = keychainFactory();
   }
@@ -72,12 +77,29 @@ async function resolveKek(args = {}) {
 
   const getOrCreate = args.getOrCreateKey32 || getOrCreateKey32;
 
-  const kek = await getOrCreate({
-    keychain,
-    service,
-    account,
-    createRandomKey32: () => randomBytes(32),
-  });
+  let kek;
+  try {
+    kek = await getOrCreate({
+      keychain,
+      service,
+      account,
+      createRandomKey32: () => randomBytes(32),
+    });
+  } catch (e) {
+    // If the Swift backend is unavailable at runtime (e.g. swift missing), fall back.
+    const usingDefaultFactory = !args.keychain && !args.keychainFactory;
+    if (usingDefaultFactory && keychain instanceof MacOSSwiftKeychain) {
+      keychain = new MacOSSecurityCliKeychain();
+      kek = await getOrCreate({
+        keychain,
+        service,
+        account,
+        createRandomKey32: () => randomBytes(32),
+      });
+    } else {
+      throw e;
+    }
+  }
 
   return { kek, source: 'keychain' };
 }
