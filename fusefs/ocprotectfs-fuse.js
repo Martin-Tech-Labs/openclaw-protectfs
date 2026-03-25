@@ -35,6 +35,7 @@ function parseArgs(argv) {
     backstore: defaultBackstore(),
     mountpoint: defaultMountpoint(),
     kekFd: null,
+    plaintextPrefixes: null,
   };
 
   const args = argv.slice(2);
@@ -57,6 +58,12 @@ function parseArgs(argv) {
         cfg.kekFd = Number(next());
         if (!Number.isFinite(cfg.kekFd) || cfg.kekFd < 0) throw new Error('--kek-fd must be a non-negative integer');
         break;
+      case '--plaintext-prefix': {
+        const p = next();
+        if (cfg.plaintextPrefixes === null) cfg.plaintextPrefixes = [];
+        cfg.plaintextPrefixes.push(p);
+        break;
+      }
       case '--help':
       case '-h':
         printHelp();
@@ -78,12 +85,14 @@ Usage:
 Flags:
   --backstore <path>   Backstore directory (default ~/.openclaw.real)
   --mountpoint <path>  Mountpoint directory (default ~/.openclaw)
-  --kek-fd <n>         Read 32-byte KEK from the given file descriptor (recommended)
-  -h, --help           Show help
+  --kek-fd <n>           Read 32-byte KEK from the given file descriptor (recommended)
+  --plaintext-prefix <p>  Top-level plaintext passthrough prefix (repeatable)
+  -h, --help             Show help
 
 Environment:
-  OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1  Allow encrypted-path operations (fail-closed default deny)
-  OCPROTECTFS_KEK_B64=<base64>          (legacy) 32-byte KEK, base64-encoded
+  OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1     Allow encrypted-path operations (fail-closed default deny)
+  OCPROTECTFS_PLAINTEXT_PREFIXES=a,b,c     Comma-separated passthrough prefixes (used if no flags provided)
+  OCPROTECTFS_KEK_B64=<base64>             (legacy) 32-byte KEK, base64-encoded
 `);
 }
 
@@ -154,6 +163,7 @@ function main() {
     Fuse,
     gatewayAccessAllowed,
     kek,
+    plaintextPrefixes: cfg.plaintextPrefixes,
   });
 
   const fuse = new Fuse(mountpoint, ops, {
