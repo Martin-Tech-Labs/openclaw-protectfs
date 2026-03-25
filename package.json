@@ -10,7 +10,9 @@
   },
   "private": true,
   "scripts": {
-    "test": "node --test --test-force-exit"
+    "test": "node --test --test-force-exit",
+    "coverage": "node --test --experimental-test-coverage --test-force-exit",
+    "coverage:check": "node --test --experimental-test-coverage --test-force-exit --test-coverage-lines=84 --test-coverage-functions=85 --test-coverage-branches=60"
   },
   "version": "0.0.0"
 }
