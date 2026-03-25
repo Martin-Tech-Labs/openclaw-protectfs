@@ -13,6 +13,8 @@ A separate wrapper process is the root of trust:
 - spawns the OpenClaw gateway as its child
 - provides a liveness socket used by FUSE to fail-closed
 
+Swift rewrite plan: see `docs/swift-supervisor.md`.
+
 ## Threat model
 ### In-scope
 - Other arbitrary processes running as the same user (`agent`) should not be able to read sensitive OpenClaw data from disk (only ciphertext).
