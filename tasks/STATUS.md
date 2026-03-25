@@ -9,8 +9,8 @@
 ### Post-PLAN 19 verification (confidence pass)
 Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
 
-- Real-mount tests are **opt-in** via `OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1` to keep `npm test` reliable.
-- Note: `fuse-native` real mounts can be unstable on very new Node majors; prefer running real-mount tests under an LTS Node.
+- Real-mount tests run **by default** on macOS when prerequisites exist (macFUSE + `fuse-native`). (On very new Node majors they may auto-skip unless forced.)
+- In CI, real-mount tests are skipped by default; set `OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1` to force-enable.
 
 - [x] Unit tests: `npm test` / `make test` exit cleanly on Node v25.6.1 (local run 2026-03-25). If hangs recur, investigate open handles / Node test runner behavior; CI runs `make test` on ubuntu-latest.
 - [ ] Real mount verification on macOS (with macFUSE installed):

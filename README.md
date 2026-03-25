@@ -96,8 +96,10 @@ grep -R "secret" ~/.openclaw.real || echo "OK: not found in backstore"
 ```bash
 npm install
 npm test
-# optional (real macFUSE mount tests):
-OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 npm test
+# real macFUSE mount tests run automatically on macOS when prerequisites exist.
+# On very new Node majors, they are skipped unless explicitly forced.
+# In CI they are skipped unless explicitly enabled:
+# CI=1 OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 npm test
 ```
 
 ## Status
@@ -208,10 +210,12 @@ npm install
 npm test
 ```
 
-To run **real macFUSE mount** tests locally (opt-in):
+**Real macFUSE mount** tests run automatically on macOS when prerequisites exist.
+
+In CI they are skipped unless explicitly enabled:
 
 ```bash
-OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 npm test
+CI=1 OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 npm test
 ```
 
 (See `docs/local-macfuse.md` for prerequisites/troubleshooting.)
@@ -287,7 +291,7 @@ Known limitations / non-goals:
 
 - `fusefs/src/**` — FUSE implementation
 - `fusefs/test/**` — unit/wiring tests for the FUSE layer
-- `fusefs/acceptance/**` — opt-in real-mount acceptance tests (macOS + macFUSE)
+- `fusefs/acceptance/**` — best-effort real-mount acceptance tests (macOS + macFUSE)
 
 ### Running tests
 ```bash
@@ -303,10 +307,12 @@ npm run coverage
 npm run coverage:check
 ```
 
-To include **real macFUSE mount** acceptance tests locally (opt-in):
+**Real macFUSE mount** acceptance tests run automatically on macOS when prerequisites exist.
+
+In CI they are skipped unless explicitly enabled:
 
 ```bash
-OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 npm test
+CI=1 OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 npm test
 ```
 
 ## Running

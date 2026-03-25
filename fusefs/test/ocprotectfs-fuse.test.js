@@ -9,17 +9,19 @@ const FUSE_BIN = path.join(__dirname, '..', 'ocprotectfs-fuse.js');
 
 function canAttemptRealMount() {
   // Real mounts can hang on developer machines depending on macFUSE state
-  // (system extension approval, permissions, stale mounts, etc.). Keep these
-  // tests opt-in so `npm test` is reliable by default.
-  if (process.env.OCPROTECTFS_RUN_REAL_MOUNT_TESTS !== '1') return false;
+  // (system extension approval, permissions, stale mounts, etc.).
+  //
+  // Policy:
+  // - Local: attempt by default if prerequisites exist.
+  // - CI: skip by default unless explicitly enabled.
+  if (process.env.CI && process.env.OCPROTECTFS_RUN_REAL_MOUNT_TESTS !== '1') return false;
 
   if (process.platform !== 'darwin') return false;
 
-  // fuse-native can be sensitive to Node ABI versions. The optional dependency
-  // we use is known to be unstable on very new Node majors. Prefer running
-  // real-mount tests under an LTS Node.
+  // fuse-native can be sensitive to Node ABI versions. Skip on very new
+  // Node majors unless explicitly forced.
   const nodeMajor = Number(String(process.versions.node || '').split('.')[0]);
-  if (Number.isFinite(nodeMajor) && nodeMajor >= 23) return false;
+  if (Number.isFinite(nodeMajor) && nodeMajor >= 23 && process.env.OCPROTECTFS_RUN_REAL_MOUNT_TESTS !== '1') return false;
 
   // Heuristic: presence of macFUSE install.
   if (!fs.existsSync('/Library/Filesystems/macfuse.fs') && !fs.existsSync('/Library/Filesystems/osxfuse.fs')) return false;
