@@ -307,11 +307,22 @@ async function run(cfg) {
   log(`fuse started pid=${fuse.pid}`);
 
   // Send KEK to the FUSE daemon over the dedicated pipe (FD 3), then close.
+  // Important: if the child exits early (or we SIGKILL it during fail-closed
+  // flows), the pipe can emit async errors (EPIPE/ECONNRESET). Those must not
+  // crash the wrapper or tests.
   try {
     const kekStream = fuse.stdio[3];
     if (!kekStream || typeof kekStream.write !== 'function') throw new Error('missing KEK pipe stream');
-    kekStream.write(kek);
-    kekStream.end();
+
+    // Swallow pipe errors that can occur during teardown.
+    kekStream.on('error', (err) => {
+      log(`kek: pipe error (ignored): ${err && err.code ? err.code : err.message}`);
+    });
+
+    await new Promise((resolve, reject) => {
+      kekStream.write(kek, (e) => (e ? reject(e) : resolve()));
+    });
+    await new Promise((resolve) => kekStream.end(resolve));
   } catch (e) {
     log(`kek: failed to write to fuse fd pipe: ${e.message}`);
     try {
