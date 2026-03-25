@@ -153,6 +153,13 @@ Some bring-up flows use explicit env gates for testing (e.g. allowing gateway ac
 npm test
 ```
 
+Coverage (Node test runner):
+
+```bash
+npm run coverage
+npm run coverage:check
+```
+
 To include **real macFUSE mount** acceptance tests locally (opt-in):
 
 ```bash
