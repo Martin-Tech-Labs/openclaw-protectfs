@@ -34,3 +34,7 @@ Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
 - PLAN 25-license-badges: add MIT LICENSE + README badges (CI/license)
 
 - PLAN 26-remove-v1-references: remove v1 references in code/docs; keep only real format/version markers
+
+## Final bookkeeping
+- This file/README now explicitly declare **V1: COMPLETE**.
+- Recommendation: disable the protectfs repo heartbeat cron (this loop) unless you want post-V1 verification work.
