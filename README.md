@@ -135,6 +135,15 @@ Run the wrapper which mounts FUSE and starts the gateway.
 ## Security notes (v1)
 Some bring-up flows use explicit env gates for testing (e.g. allowing gateway access checks). Those are not intended as the final trust boundary; the intended boundary is wrapper/gateway liveness + identity checks enforced at the FUSE layer.
 
+OWASP-oriented hardening notes (PLAN 23):
+- All FUSE ops must enforce access checks consistently (no “authz then still do the syscall” footguns).
+- Fail-closed by default for encrypted paths.
+
+Known limitations / non-goals (v1):
+- The encrypted file implementation currently buffers whole-file plaintext in memory for some operations (large-file DoS potential).
+- Metadata is not fully hidden (e.g. directory structure + filenames exist in the backstore).
+- Logging favors operator debuggability and may include absolute paths.
+
 ## Repo workflow
 - Work is tracked under `tasks/`.
 - Toby authors PRs; Joao reviews (max 2 rounds).

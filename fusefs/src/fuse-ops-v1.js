@@ -323,9 +323,12 @@ function makeFuseOps({ backstore, Fuse, gatewayAccessAllowed, kek }) {
     },
 
     mkdir: (p, mode, cb) => {
-      authorizeFusePath(OPS.MKDIR, p, cb);
+      const cls = authorizeFusePath(OPS.MKDIR, p, cb);
+      if (!cls) return;
+
       const real = rp(p, cb);
       if (!real) return;
+
       fs.mkdir(real, { mode }, (err) => {
         if (err) return cb(errnoCode(err, Fuse));
         return cb(0);
@@ -333,9 +336,12 @@ function makeFuseOps({ backstore, Fuse, gatewayAccessAllowed, kek }) {
     },
 
     rmdir: (p, cb) => {
-      authorizeFusePath(OPS.RMDIR, p, cb);
+      const cls = authorizeFusePath(OPS.RMDIR, p, cb);
+      if (!cls) return;
+
       const real = rp(p, cb);
       if (!real) return;
+
       fs.rmdir(real, (err) => {
         if (err) return cb(errnoCode(err, Fuse));
         return cb(0);

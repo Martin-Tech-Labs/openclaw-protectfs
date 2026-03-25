@@ -68,6 +68,14 @@ function pRename(ops, src, dest) {
   return p((resolve) => ops.rename(src, dest, (code) => resolve(code)));
 }
 
+function pMkdir(ops, pth, mode = 0o755) {
+  return p((resolve) => ops.mkdir(pth, mode, (code) => resolve(code)));
+}
+
+function pRmdir(ops, pth) {
+  return p((resolve) => ops.rmdir(pth, (code) => resolve(code)));
+}
+
 const KEK = Buffer.alloc(32, 7);
 
 test('fuse-ops-v1 coverage: encrypted create/write/fsync/release persists ciphertext + sidecar', async () => {
@@ -196,4 +204,26 @@ test('fuse-ops-v1 coverage: rename across plaintext/encrypted boundary is denied
 
   const code = await pRename(ops, '/workspace/a.txt', '/secret.txt');
   assert.equal(code, -FakeFuse.EACCES);
+});
+
+test('fuse-ops-v1 hardening: mkdir/rmdir must not bypass access checks', async () => {
+  const backstore = tmpDir();
+
+  const { ops } = makeFuseOps({
+    backstore,
+    Fuse: FakeFuse,
+    gatewayAccessAllowed: false,
+    kek: KEK,
+  });
+
+  // Encrypted-by-default path (requires gateway access checks).
+  const mk = await pMkdir(ops, '/secret-dir', 0o700);
+  assert.equal(mk, -FakeFuse.EACCES);
+  assert.ok(!fs.existsSync(path.join(backstore, 'secret-dir')));
+
+  // Even if the directory exists already, rmdir should be denied under fail-closed.
+  fs.mkdirSync(path.join(backstore, 'secret-dir'));
+  const rm = await pRmdir(ops, '/secret-dir');
+  assert.equal(rm, -FakeFuse.EACCES);
+  assert.ok(fs.existsSync(path.join(backstore, 'secret-dir')));
 });
