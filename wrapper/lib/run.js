@@ -261,19 +261,26 @@ async function run(cfg) {
   // PLAN 19: KEK comes from Keychain and is passed to FUSE via an anonymous pipe
   // (FD), not via environment variables.
   let kek;
-  try {
-    const keychain = new MacOSSecurityCliKeychain();
-    kek = await getOrCreateKey32({
-      keychain,
-      service: 'ocprotectfs',
-      account: 'kek',
-      createRandomKey32: () => crypto.randomBytes(32),
-    });
-    log('kek: loaded from Keychain (service=ocprotectfs, account=kek)');
-  } catch (e) {
-    log(`kek: keychain failed: ${e.message}`);
-    await liveness.close();
-    return EXIT.CONFIG;
+  if (process.platform !== 'darwin') {
+    // CI runs on Linux; keep wrapper tests green by using an ephemeral KEK.
+    // Production target is macOS, where we use Keychain.
+    kek = crypto.randomBytes(32);
+    log('kek: non-darwin platform; using ephemeral random KEK (tests/CI only)');
+  } else {
+    try {
+      const keychain = new MacOSSecurityCliKeychain();
+      kek = await getOrCreateKey32({
+        keychain,
+        service: 'ocprotectfs',
+        account: 'kek',
+        createRandomKey32: () => crypto.randomBytes(32),
+      });
+      log('kek: loaded from Keychain (service=ocprotectfs, account=kek)');
+    } catch (e) {
+      log(`kek: keychain failed: ${e.message}`);
+      await liveness.close();
+      return EXIT.CONFIG;
+    }
   }
 
   const childEnv = buildChildEnv({
