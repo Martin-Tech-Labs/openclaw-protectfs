@@ -10,7 +10,10 @@ macFUSE-based protective filesystem overlay for OpenClaw on macOS.
 
 ### Operator quick start (mount + run gateway)
 
-1) Install and enable **macFUSE**.
+Goal: mount a protective overlay at `~/.openclaw`, migrate your existing data to `~/.openclaw.real` on first run, and start the OpenClaw gateway via the wrapper.
+
+1) Install and enable **macFUSE** (required on macOS).
+
 2) Clone + install:
 
 ```bash
@@ -19,15 +22,38 @@ cd openclaw-protectfs
 npm install
 ```
 
-3) Start the wrapper (mounts FUSE at `~/.openclaw`, migrates existing data to `~/.openclaw.real` on first run, then spawns the OpenClaw gateway):
+3) Start the wrapper (mounts FUSE at `~/.openclaw`, then spawns the OpenClaw gateway):
 
 ```bash
+# v1 bring-up gate (fail-closed unless explicitly allowed)
 export OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1
+
+# KEK (Key Encryption Key) will be retrieved/created in macOS Keychain
+#   service=ocprotectfs, account=kek
+# and passed to the FUSE daemon in-memory via a pipe (no env secret).
 node wrapper/ocprotectfs.js --help
-# then run your real invocation (see "Start wrapper" below)
+
+# then run the real invocation (see "Start wrapper" below)
 ```
 
-If anything looks wrong, stop the wrapper and see **Safety / rollback**.
+4) Quick verify (plaintext vs ciphertext):
+
+```bash
+# Workspace is passthrough plaintext
+echo "hello" > ~/.openclaw/workspace/_ocpfs_smoketest.txt
+
+# Non-workspace paths are encrypted-at-rest in ~/.openclaw.real
+echo "secret" > ~/.openclaw/_ocpfs_smoketest_secret.txt
+
+# The mounted view shows plaintext...
+cat ~/.openclaw/_ocpfs_smoketest_secret.txt
+
+# ...but the backstore should not.
+# (If this finds the word 'secret' under ~/.openclaw.real, something is wrong.)
+grep -R "secret" ~/.openclaw.real || echo "OK: not found in backstore"
+```
+
+5) Rollback (if anything looks wrong): stop the wrapper (Ctrl-C) and see **Safety / rollback** below.
 
 ### Developer quick start (tests)
 
