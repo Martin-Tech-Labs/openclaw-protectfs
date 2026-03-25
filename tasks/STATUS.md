@@ -2,6 +2,7 @@
 
 ## V1
 - **V1: COMPLETE** (baseline implementation + tests + operator docs).
+- Last updated: 2026-03-25 (bookkeeping)
 - Bookkeeping: this repo heartbeat/loop cron can be disabled unless you want post-V1 verification work (see below).
 
 ## Current focus
