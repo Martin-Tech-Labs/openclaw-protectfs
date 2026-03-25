@@ -217,8 +217,31 @@ OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 npm test
 (See `docs/local-macfuse.md` for prerequisites/troubleshooting.)
 
 ## Running (operator)
-### First run / migration
-On first mount, existing `~/.openclaw` contents are migrated into `~/.openclaw.real` (atomic rename) and a marker is written.
+### Backstore (`~/.openclaw.real`) — what it is
+ProtectFS mounts a **path-compatible view** at `~/.openclaw`, but the **real bytes on disk** live in the backstore:
+
+- `~/.openclaw` — the **mounted view** (what OpenClaw and tools read/write)
+- `~/.openclaw.real` — the **backstore** (the underlying storage)
+
+Think of `~/.openclaw.real` as “the real data directory”, and `~/.openclaw` as a policy-enforced overlay on top.
+
+Notes:
+- Workspace passthrough prefixes are stored plaintext in the backstore (so developer tooling stays usable).
+- Everything else is stored encrypted-at-rest in the backstore (ciphertext + `*.ocpfs.dek` sidecars).
+
+### First run / migration (don’t lose your pre-existing `~/.openclaw`)
+When ProtectFS first mounts at `~/.openclaw`, any **pre-existing** content that was already in `~/.openclaw` would otherwise become **hidden under the mount**.
+
+To avoid that, the wrapper performs a one-time migration step **before mounting**:
+
+- Moves existing entries out of `~/.openclaw` into:
+  - `~/.openclaw.real/.legacy-openclaw/<timestamp>/...`
+- Writes a marker file:
+  - `~/.openclaw.real/.ocpfs.migrated.json`
+- Uses an in-progress file for fail-closed behavior (if present, startup stops and you inspect manually):
+  - `~/.openclaw.real/.ocpfs.migrating.json`
+
+If you ever need to inspect what got moved, look in the `.legacy-openclaw/` directory in the backstore.
 
 ### Start wrapper
 Run the wrapper which mounts FUSE and starts the gateway.
