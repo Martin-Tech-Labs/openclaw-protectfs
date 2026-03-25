@@ -13,6 +13,21 @@ function _assertKey32(name, buf) {
   if (buf.length !== 32) throw new Error(`${name} must be 32 bytes`);
 }
 
+function parseWrappedKekV2(wrapped) {
+  if (!Buffer.isBuffer(wrapped)) throw new Error('wrapped must be a Buffer');
+
+  if (wrapped.length < 4 + 1 + 2) throw new Error('wrapped too short');
+  const magic = wrapped.subarray(0, 4).toString('utf8');
+  if (magic !== 'OCKW') throw new Error('wrapped: bad magic');
+  const ver = wrapped.readUInt8(4);
+  if (ver !== 0x02) throw new Error(`wrapped: unsupported version ${ver}`);
+  const ctLen = wrapped.readUInt16BE(5);
+  const ct = wrapped.subarray(7);
+  if (ct.length !== ctLen) throw new Error('wrapped: length mismatch');
+
+  return { ver, ciphertext: ct };
+}
+
 /**
  * Wrap a 32-byte KEK using RSA-OAEP-SHA256.
  *
@@ -53,17 +68,8 @@ function wrapKekV2({ kek, publicKey }) {
  * @returns {Buffer} kek 32-byte Buffer
  */
 function unwrapKekV2({ wrapped, privateKey }) {
-  if (!Buffer.isBuffer(wrapped)) throw new Error('wrapped must be a Buffer');
+  const { ciphertext: ct } = parseWrappedKekV2(wrapped);
   if (!privateKey) throw new Error('privateKey required');
-
-  if (wrapped.length < 4 + 1 + 2) throw new Error('wrapped too short');
-  const magic = wrapped.subarray(0, 4).toString('utf8');
-  if (magic !== 'OCKW') throw new Error('wrapped: bad magic');
-  const ver = wrapped.readUInt8(4);
-  if (ver !== 0x02) throw new Error(`wrapped: unsupported version ${ver}`);
-  const ctLen = wrapped.readUInt16BE(5);
-  const ct = wrapped.subarray(7);
-  if (ct.length !== ctLen) throw new Error('wrapped: length mismatch');
 
   const kek = crypto.privateDecrypt(
     {
@@ -79,6 +85,7 @@ function unwrapKekV2({ wrapped, privateKey }) {
 }
 
 module.exports = {
+  parseWrappedKekV2,
   wrapKekV2,
   unwrapKekV2,
 };
