@@ -3,7 +3,7 @@
 ## Current (PLAN)
 - Plan task: **PLAN 19-keychain-kek-e2e**
 - Focus: make Keychain the real operator path for KEK (user presence) and pass KEK to FUSE without env.
-- Status: not started.
+- Status: PR open for review: #49 (branch: `plan/19-keychain-kek-e2e`).
 
 ## Baseline v1 complete
 The baseline v1 (env-based bring-up, encrypted-at-rest, policy enforcement, real mount tests, README) is complete.

@@ -129,9 +129,15 @@ Some bring-up flows use explicit env gates for testing (e.g. allowing gateway ac
 ## Running (v1)
 
 ### Environment variables (bring-up)
-For the encrypted-path functionality in v1 bring-up:
-- `OCPROTECTFS_KEK_B64`: base64-encoded 32-byte KEK (required for encrypted paths)
+For v1 bring-up there is an explicit gate to fail closed unless authorized:
 - `OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1`: enables encrypted-path access checks (bring-up/testing gate)
+
+KEK handling (recommended):
+- Wrapper retrieves/creates KEK from macOS Keychain (`service=ocprotectfs`, `account=kek`).
+- Wrapper passes KEK to the FUSE daemon in-memory via an anonymous pipe FD (`--kek-fd`).
+
+Legacy/testing-only:
+- `OCPROTECTFS_KEK_B64`: base64-encoded 32-byte KEK (do not use for production runs)
 
 ### Start wrapper (spawns FUSE + gateway)
 Wrapper entrypoint:
@@ -145,8 +151,8 @@ Example (best-effort) invocation:
 ```bash
 # Use the repo's fuse daemon + the existing OpenClaw gateway node entry.
 export OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1
-export OCPROTECTFS_KEK_B64="<base64-32-bytes>"
 
+# KEK will be retrieved/created in Keychain and passed to FUSE via FD (no env secret).
 node wrapper/ocprotectfs.js   --require-fuse-ready   --fuse-bin "$(command -v node)"   --fuse-arg "$(pwd)/fusefs/ocprotectfs-fuse.js"   --gateway-bin "$(command -v node)"   --gateway-arg "/Users/agent/openclaw/node_modules/openclaw/dist/index.js"   --gateway-arg gateway   --gateway-arg --port   --gateway-arg 18789
 ```
 

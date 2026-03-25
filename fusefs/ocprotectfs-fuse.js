@@ -12,7 +12,9 @@
 //
 // IMPORTANT SECURITY DEFAULTS:
 // - fail closed: encrypted paths require OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1
-// - encrypted paths also require a KEK via OCPROTECTFS_KEK_B64 (32-byte key, base64)
+// - encrypted paths also require a KEK (32 bytes)
+//   - recommended: wrapper passes KEK via --kek-fd <n>
+//   - legacy/testing: OCPROTECTFS_KEK_B64
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -32,6 +34,7 @@ function parseArgs(argv) {
   const cfg = {
     backstore: defaultBackstore(),
     mountpoint: defaultMountpoint(),
+    kekFd: null,
   };
 
   const args = argv.slice(2);
@@ -49,6 +52,10 @@ function parseArgs(argv) {
         break;
       case '--mountpoint':
         cfg.mountpoint = next();
+        break;
+      case '--kek-fd':
+        cfg.kekFd = Number(next());
+        if (!Number.isFinite(cfg.kekFd) || cfg.kekFd < 0) throw new Error('--kek-fd must be a non-negative integer');
         break;
       case '--help':
       case '-h':
@@ -71,11 +78,12 @@ Usage:
 Flags:
   --backstore <path>   Backstore directory (default ~/.openclaw.real)
   --mountpoint <path>  Mountpoint directory (default ~/.openclaw)
+  --kek-fd <n>         Read 32-byte KEK from the given file descriptor (recommended)
   -h, --help           Show help
 
 Environment:
   OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1  Allow encrypted-path operations (fail-closed default deny)
-  OCPROTECTFS_KEK_B64=<base64>          32-byte KEK, base64-encoded (required for encrypted paths)
+  OCPROTECTFS_KEK_B64=<base64>          (legacy) 32-byte KEK, base64-encoded
 `);
 }
 
@@ -109,6 +117,25 @@ function parseKeyFromEnvB64(name) {
   return Buffer.from(String(v), 'base64');
 }
 
+function readExactly(fd, n) {
+  // Best-effort: read full contents from fd (pipe) then validate length.
+  // For our contract, wrapper writes exactly 32 bytes and closes.
+  const buf = fs.readFileSync(fd);
+  if (!Buffer.isBuffer(buf)) throw new Error('failed to read KEK from fd');
+  if (buf.length !== n) throw new Error(`KEK read from fd has wrong length (expected ${n} bytes, got ${buf.length})`);
+  return buf;
+}
+
+function loadKek(cfg) {
+  if (Number.isFinite(cfg.kekFd) && cfg.kekFd !== null) {
+    return readExactly(cfg.kekFd, 32);
+  }
+
+  const kek = parseKeyFromEnvB64('OCPROTECTFS_KEK_B64');
+  if (kek && kek.length !== 32) throw new Error('OCPROTECTFS_KEK_B64 must decode to 32 bytes');
+  return kek;
+}
+
 function main() {
   const cfg = parseArgs(process.argv);
 
@@ -120,8 +147,7 @@ function main() {
   const Fuse = loadFuseNative();
 
   const gatewayAccessAllowed = process.env.OCPROTECTFS_GATEWAY_ACCESS_ALLOWED === '1';
-  const kek = parseKeyFromEnvB64('OCPROTECTFS_KEK_B64');
-  if (kek && kek.length !== 32) throw new Error('OCPROTECTFS_KEK_B64 must decode to 32 bytes');
+  const kek = loadKek(cfg);
 
   const { ops } = makeFuseOps({
     backstore,
