@@ -22,3 +22,11 @@ For non-trivial PRs:
 - [ ] `npm test` passes locally
 - [ ] Security notes for access-control / crypto changes
 - [ ] PR description includes: What/Why/How/Test Plan/Risks
+
+
+## Backlog (queued)
+- PLAN 20-repo-layout-tests: restructure into src/ + test/ + acceptance tests folder; README test instructions
+- PLAN 21-testability-di-keychain: formalize IKeychain + DI/mocking for keychain/process boundaries; add integration tests
+- PLAN 22-coverage-improvements: add coverage tooling + thresholds; expand tests to raise coverage
+- PLAN 23-owasp-pass-fixes: OWASP-oriented review + fixes + document remaining limitations
+- PLAN 24-macos-ci-strategy: add macos CI job + clarify macFUSE runner constraints; optional self-hosted runner path
