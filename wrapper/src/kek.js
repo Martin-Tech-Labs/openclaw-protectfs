@@ -1,6 +1,8 @@
 const crypto = require('node:crypto');
 
 const { MacOSSecurityCliKeychain, getOrCreateKey32 } = require('./keychain');
+const { resolveKekV2 } = require('./kek-v2');
+const { MacOSKeychainRsaKeywrapAdapter } = require('./keywrap-keychain');
 
 /**
  * Resolve the KEK (Key Encryption Key) to use for this run.
@@ -24,7 +26,11 @@ const { MacOSSecurityCliKeychain, getOrCreateKey32 } = require('./keychain');
  *
  * @param {string} [args.service]
  * @param {string} [args.account]
- * @returns {Promise<{kek: Buffer, source: 'ephemeral'|'keychain'}>}
+ * @param {string} [args.accountWrapped] v2 wrapped KEK account name
+ * @param {string} [args.keyTag] v2 key tag (Keychain key identifier)
+ * @param {{ensureKeypair: Function, decrypt: Function}} [args.keywrap] v2 keywrap adapter override
+ *
+ * @returns {Promise<{kek: Buffer, source: 'ephemeral'|'keychain'|'keychain-wrapped'}>}
  */
 async function resolveKek(args = {}) {
   const platform = args.platform || process.platform;
@@ -40,8 +46,6 @@ async function resolveKek(args = {}) {
     return { kek: randomBytes(32), source: 'ephemeral' };
   }
 
-  const getOrCreate = args.getOrCreateKey32 || getOrCreateKey32;
-
   let keychain = args.keychain;
   if (!keychain) {
     const keychainFactory =
@@ -51,6 +55,22 @@ async function resolveKek(args = {}) {
       });
     keychain = keychainFactory();
   }
+
+  // Opt-in v2: store a *wrapped* KEK in Keychain and unwrap via a Keychain-held non-exportable RSA private key.
+  // This avoids persisting the raw KEK as an exportable secret.
+  if (env.OCPROTECTFS_KEK_V2 === '1') {
+    const keywrap = args.keywrap || new MacOSKeychainRsaKeywrapAdapter();
+    return resolveKekV2({
+      keychain,
+      keywrap,
+      randomBytes,
+      service,
+      accountWrapped: args.accountWrapped,
+      keyTag: args.keyTag,
+    });
+  }
+
+  const getOrCreate = args.getOrCreateKey32 || getOrCreateKey32;
 
   const kek = await getOrCreate({
     keychain,

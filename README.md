@@ -316,7 +316,10 @@ Wrapper-provided:
 - `OCPROTECTFS_LIVENESS_SOCK`: unix socket path created by the wrapper and passed to child processes. Encrypted-path operations fail closed unless this socket is present.
 
 KEK handling (recommended):
-- Wrapper retrieves/creates KEK from macOS Keychain (`service=ocprotectfs`, `account=kek`).
+- Default (v1): wrapper retrieves/creates KEK from macOS Keychain (`service=ocprotectfs`, `account=kek`).
+- Opt-in (v2): set `OCPROTECTFS_KEK_V2=1` to store a *wrapped* KEK in Keychain (`service=ocprotectfs`, `account=kek.v2.wrapped`) and unwrap it via a Keychain-held **non-exportable** RSA private key (tag: `ocprotectfs.kekwrap.v2`).
+  - This avoids persisting the raw KEK as an exportable Keychain secret.
+  - Migration/rollback: v2 does not read the v1 `kek` item; to reset, delete the `kek.v2.wrapped` item (and the `ocprotectfs.kekwrap.v2` keypair if desired).
 - Wrapper passes KEK to the FUSE daemon in-memory via an anonymous pipe FD (`--kek-fd`).
 
 Legacy/testing-only:
