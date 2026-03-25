@@ -23,11 +23,11 @@ Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
   - [ ] Operator notes in README updated if any surprises.
 
 ## Recently completed
+- **PLAN 21-testability-di-keychain** — formalized Keychain/KEK DI points (explicit keychain instance + injectable `getOrCreateKey32`) and added test coverage for the DI boundary.
 - **PLAN 20-repo-layout-tests** — repo layout already in src/ + test/ + acceptance/ (wrapper + fusefs); README updated to document layout + test commands.
 - **PLAN 19-keychain-kek-e2e** — merged as PR **#49** (Keychain KEK + FD handoff; no env secret).
 
 ## Backlog (queued)
-- PLAN 21-testability-di-keychain: formalize IKeychain + DI/mocking for keychain/process boundaries; add integration tests
 - PLAN 22-coverage-improvements: add coverage tooling + thresholds; expand tests to raise coverage
 - PLAN 23-owasp-pass-fixes: OWASP-oriented review + fixes + document remaining limitations
 - PLAN 24-macos-ci-strategy: add macos CI job + clarify macFUSE runner constraints; optional self-hosted runner path

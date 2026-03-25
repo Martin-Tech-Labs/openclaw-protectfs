@@ -16,7 +16,12 @@ const { MacOSSecurityCliKeychain, getOrCreateKey32 } = require('./keychain');
  * @param {string} [args.platform] e.g. process.platform
  * @param {Object} [args.env] e.g. process.env
  * @param {(n:number)=>Buffer} [args.randomBytes] crypto.randomBytes-like
- * @param {()=>({getGenericPassword: Function, setGenericPassword: Function})} [args.keychainFactory]
+ *
+ * // Keychain DI options:
+ * @param {{getGenericPassword: Function, setGenericPassword: Function}} [args.keychain] Explicit keychain instance (preferred in tests)
+ * @param {()=>({getGenericPassword: Function, setGenericPassword: Function})} [args.keychainFactory] Factory for production/advanced tests
+ * @param {typeof getOrCreateKey32} [args.getOrCreateKey32] Override for tests (spy/mocking)
+ *
  * @param {string} [args.service]
  * @param {string} [args.account]
  * @returns {Promise<{kek: Buffer, source: 'ephemeral'|'keychain'}>}
@@ -35,14 +40,19 @@ async function resolveKek(args = {}) {
     return { kek: randomBytes(32), source: 'ephemeral' };
   }
 
-  const keychainFactory =
-    args.keychainFactory ||
-    (() => {
-      return new MacOSSecurityCliKeychain();
-    });
+  const getOrCreate = args.getOrCreateKey32 || getOrCreateKey32;
 
-  const keychain = keychainFactory();
-  const kek = await getOrCreateKey32({
+  let keychain = args.keychain;
+  if (!keychain) {
+    const keychainFactory =
+      args.keychainFactory ||
+      (() => {
+        return new MacOSSecurityCliKeychain();
+      });
+    keychain = keychainFactory();
+  }
+
+  const kek = await getOrCreate({
     keychain,
     service,
     account,
