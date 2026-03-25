@@ -6,7 +6,7 @@ const os = require('node:os');
 const path = require('node:path');
 const net = require('node:net');
 
-const { EXIT } = require('../lib/run');
+const { EXIT } = require('../src/run');
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));

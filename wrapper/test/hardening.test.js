@@ -4,8 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 
-const { safeAtomicWriteFile } = require('../lib/safe-fs');
-const { buildChildEnv } = require('../lib/run');
+const { safeAtomicWriteFile } = require('../src/safe-fs');
+const { buildChildEnv } = require('../src/run');
 
 test('safeAtomicWriteFile writes file with requested mode and contents', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ocpfs-hardening-'));

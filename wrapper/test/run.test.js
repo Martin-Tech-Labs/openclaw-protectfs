@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { validateConfig, prepareDir } = require('../lib/run');
+const { validateConfig, prepareDir } = require('../src/run');
 
 test('validateConfig: requires required fields', () => {
   assert.throws(() => validateConfig(null));

@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 
-const { migrateLegacyOpenclaw, MIGRATION } = require('../lib/migrate');
+const { migrateLegacyOpenclaw, MIGRATION } = require('../src/migrate');
 
 function tmpDir(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));

@@ -44,11 +44,11 @@ This task is intentionally checklist-driven. Prefer changes that are low-risk, m
 
 Implemented:
 
-- `wrapper/lib/safe-fs.js`:
+- `wrapper/src/safe-fs.js`:
   - `safeAtomicWriteFile(path, data, {mode})` writes via a random, `open('wx')`-created temp file + `fsync` + `rename`, then `chmod`s to avoid umask widening.
   - Refuses symlink path components and refuses writing to an existing symlink leaf.
-- `wrapper/lib/migrate.js` now uses `safeAtomicWriteFile` for `.ocpfs.migrating.json` / `.ocpfs.migrated.json` markers.
-- `wrapper/lib/run.js` now uses `buildChildEnv()` to pass a small allow-listed environment + `OCPROTECTFS_LIVENESS_SOCK` to child processes.
+- `wrapper/src/migrate.js` now uses `safeAtomicWriteFile` for `.ocpfs.migrating.json` / `.ocpfs.migrated.json` markers.
+- `wrapper/src/run.js` now uses `buildChildEnv()` to pass a small allow-listed environment + `OCPROTECTFS_LIVENESS_SOCK` to child processes.
 
 Still open / follow-ups:
 

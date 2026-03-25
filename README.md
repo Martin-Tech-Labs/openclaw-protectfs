@@ -139,8 +139,25 @@ Some bring-up flows use explicit env gates for testing (e.g. allowing gateway ac
 - Work is tracked under `tasks/`.
 - Toby authors PRs; Joao reviews (max 2 rounds).
 
+## Repo layout (code + tests)
+- `wrapper/src/**` — wrapper implementation
+- `wrapper/test/**` — unit-style tests for wrapper
+- `wrapper/acceptance/**` — opt-in real-mount acceptance tests (macOS + macFUSE)
 
+- `fusefs/src/**` — FUSE implementation
+- `fusefs/test/**` — unit/wiring tests for the FUSE layer
+- `fusefs/acceptance/**` — opt-in real-mount acceptance tests (macOS + macFUSE)
 
+### Running tests
+```bash
+npm test
+```
+
+To include **real macFUSE mount** acceptance tests locally (opt-in):
+
+```bash
+OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 npm test
+```
 
 ## Running (v1)
 

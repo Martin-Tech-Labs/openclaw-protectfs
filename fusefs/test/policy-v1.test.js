@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { assertSafeRelative, isPlaintextPath, classifyPath } = require('../lib/policy-v1');
+const { assertSafeRelative, isPlaintextPath, classifyPath } = require('../src/policy-v1');
 
 test('policy-v1: assertSafeRelative normalizes and rejects traversal', () => {
   assert.equal(assertSafeRelative('a/b/../c'), 'a/c');

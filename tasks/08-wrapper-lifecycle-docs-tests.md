@@ -14,7 +14,7 @@ This is a deliberately small, low-risk follow-on after Task 07.
 
 ## Out of scope
 
-- Implementing mount/unmount inside the wrapper (still TODO in `wrapper/lib/run.js`)
+- Implementing mount/unmount inside the wrapper (still TODO in `wrapper/src/run.js`)
 - Large refactors
 
 ## Acceptance criteria
