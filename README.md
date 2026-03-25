@@ -6,6 +6,38 @@
 
 macFUSE-based protective filesystem overlay for OpenClaw on macOS.
 
+## TL;DR (end-to-end)
+
+### Operator quick start (mount + run gateway)
+
+1) Install and enable **macFUSE**.
+2) Clone + install:
+
+```bash
+gh repo clone Martin-Tech-Labs/openclaw-protectfs
+cd openclaw-protectfs
+npm install
+```
+
+3) Start the wrapper (mounts FUSE at `~/.openclaw`, migrates existing data to `~/.openclaw.real` on first run, then spawns the OpenClaw gateway):
+
+```bash
+export OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1
+node wrapper/ocprotectfs.js --help
+# then run your real invocation (see "Start wrapper" below)
+```
+
+If anything looks wrong, stop the wrapper and see **Safety / rollback**.
+
+### Developer quick start (tests)
+
+```bash
+npm install
+npm test
+# optional (real macFUSE mount tests):
+OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 npm test
+```
+
 ## Status
 - **V1: COMPLETE** (see `tasks/STATUS.md` for the canonical tracker)
 - Recommendation: disable the protectfs repo heartbeat cron unless you want post-V1 verification/backlog work.
