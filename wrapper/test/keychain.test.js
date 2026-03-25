@@ -115,5 +115,8 @@ test('keychain: MacOSSecurityCliKeychain returns null when missing item', async 
 
 test('keychain: MacOSSecurityCliKeychain refuses non-darwin platform', async () => {
   const kc = new MacOSSecurityCliKeychain({ platform: 'linux' });
-  await assert.rejects(() => kc.getGenericPassword({ service: 'ocprotectfs', account: 'kek' }), /requires darwin/);
+  await assert.rejects(
+    () => kc.getGenericPassword({ service: 'ocprotectfs', account: 'kek' }),
+    /requires macOS/,
+  );
 });
