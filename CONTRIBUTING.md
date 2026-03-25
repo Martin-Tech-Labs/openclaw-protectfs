@@ -50,3 +50,24 @@ If Joao marks a PR as **CHANGES_REQUESTED**, Toby must attempt to resolve the re
 - If changes require large scope: split into follow-up issues and reduce the PR scope so it can be completed.
 
 **No blocking rule:** the process must always make forward progress (merge a correct incremental PR and keep the parent issue open), rather than leaving PRs stuck indefinitely.
+
+## Completeness-first PRs (many commits are fine)
+
+Default expectation: a PR linked to an issue should **fully complete** that issue’s acceptance criteria.
+
+- It is OK (and often expected) for a single PR to have **many commits** while Toby iterates to address Joao’s requested changes.
+- Prefer completing the issue in the same PR over splitting into many small PRs.
+- Split into follow-up issues/PRs only when there is a clear technical reason (e.g., unavoidable external dependency, risk containment, or the PR becomes unreviewably large).
+
+## Blocked PR protocol (learn + restart)
+
+If a PR becomes genuinely blocked (cannot be completed in reasonable time, wrong approach, or an external dependency prevents progress):
+
+1) **Close the PR** (do not leave it stuck indefinitely).
+2) Comment on the linked issue with:
+   - why it was blocked
+   - what was learned
+   - the next approach to try
+3) In the next cycle, open a new PR implementing the corrected approach.
+
+This keeps progress moving and prevents long-lived stuck branches.
