@@ -148,6 +148,13 @@ Known limitations / non-goals (v1):
 - Work is tracked under `tasks/`.
 - Toby authors PRs; Joao reviews (max 2 rounds).
 
+## CI notes (macOS + macFUSE)
+- The default CI workflow runs on **ubuntu-latest** and **macos-latest**.
+- On GitHub-hosted macOS runners, you generally **cannot** install/enable the macFUSE kernel extension reliably.
+  - So CI runs **unit-style tests only** (real-mount acceptance tests remain opt-in).
+- To run real-mount acceptance tests in CI, use a **self-hosted macOS runner** with macFUSE installed:
+  - workflow: `.github/workflows/macos-real-mount.yml` (manual `workflow_dispatch`)
+
 ## Repo layout (code + tests)
 - `wrapper/src/**` — wrapper implementation
 - `wrapper/test/**` — unit-style tests for wrapper

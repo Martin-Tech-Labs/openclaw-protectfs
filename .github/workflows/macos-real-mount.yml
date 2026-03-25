@@ -1,0 +1,36 @@
+name: macos-real-mount (self-hosted)
+
+# This workflow is intentionally *not* part of normal PR CI.
+# GitHub-hosted macOS runners cannot reliably install/enable the macFUSE kernel extension,
+# which is required to run real mount acceptance tests.
+#
+# Use a self-hosted macOS runner with:
+# - macFUSE installed and enabled
+# - Full Disk Access (as needed) for the runner user
+# - A stable Node LTS runtime (Node majors too new can make fuse-native flaky)
+#
+# Suggested runner labels:
+#   self-hosted, macos, macfuse
+
+on:
+  workflow_dispatch:
+
+jobs:
+  real-mount:
+    runs-on: [self-hosted, macos, macfuse]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        run: npm ci
+
+      - name: Real mount acceptance tests (macFUSE)
+        env:
+          OCPROTECTFS_RUN_REAL_MOUNT_TESTS: "1"
+        run: npm test
