@@ -2,8 +2,10 @@ const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const net = require('node:net');
+const crypto = require('node:crypto');
 
 const { migrateLegacyOpenclaw } = require('./migrate');
+const { MacOSSecurityCliKeychain, getOrCreateKey32 } = require('./keychain');
 
 const EXIT = {
   OK: 0,
@@ -256,22 +258,63 @@ async function run(cfg) {
     return EXIT.LIVENESS;
   }
 
-  const childEnv = buildChildEnv({ OCPROTECTFS_LIVENESS_SOCK: liveness.path });
+  // PLAN 19: KEK comes from Keychain and is passed to FUSE via an anonymous pipe
+  // (FD), not via environment variables.
+  let kek;
+  try {
+    const keychain = new MacOSSecurityCliKeychain();
+    kek = await getOrCreateKey32({
+      keychain,
+      service: 'ocprotectfs',
+      account: 'kek',
+      createRandomKey32: () => crypto.randomBytes(32),
+    });
+    log('kek: loaded from Keychain (service=ocprotectfs, account=kek)');
+  } catch (e) {
+    log(`kek: keychain failed: ${e.message}`);
+    await liveness.close();
+    return EXIT.CONFIG;
+  }
 
-  const fuse = spawn(cfg.fuseBin, cfg.fuseArgs, {
-    stdio: ['ignore', 'pipe', 'pipe'],
+  const childEnv = buildChildEnv({
+    OCPROTECTFS_LIVENESS_SOCK: liveness.path,
+    // Bring-up/testing gate for v1 fail-closed behavior. We pass this through
+    // explicitly rather than inheriting the full parent env.
+    ...(process.env.OCPROTECTFS_GATEWAY_ACCESS_ALLOWED === '1' ? { OCPROTECTFS_GATEWAY_ACCESS_ALLOWED: '1' } : {}),
+  });
+
+  const fuseArgs = [...cfg.fuseArgs, '--kek-fd', '3'];
+  const fuse = spawn(cfg.fuseBin, fuseArgs, {
+    stdio: ['ignore', 'pipe', 'pipe', 'pipe'],
     detached: true,
     env: childEnv,
   });
   fuse.unref();
   teeChildOutput(fuse, 'fuse');
-  log(`starting fuse: ${cfg.fuseBin} ${cfg.fuseArgs.join(' ')}`);
+  log(`starting fuse: ${cfg.fuseBin} ${fuseArgs.join(' ')}`);
 
   if (!fuse.pid) {
     await liveness.close();
     return EXIT.FUSE_START;
   }
   log(`fuse started pid=${fuse.pid}`);
+
+  // Send KEK to the FUSE daemon over the dedicated pipe (FD 3), then close.
+  try {
+    const kekStream = fuse.stdio[3];
+    if (!kekStream || typeof kekStream.write !== 'function') throw new Error('missing KEK pipe stream');
+    kekStream.write(kek);
+    kekStream.end();
+  } catch (e) {
+    log(`kek: failed to write to fuse fd pipe: ${e.message}`);
+    try {
+      terminateProcessGroup(fuse.pid, 'SIGTERM');
+    } catch (_) {
+      // ignore
+    }
+    await liveness.close();
+    return EXIT.FUSE_START;
+  }
 
   // Rudimentary readiness detection (Task 03): proceed once the fuse process
   // prints a READY line, or after a short timeout for legacy placeholders.

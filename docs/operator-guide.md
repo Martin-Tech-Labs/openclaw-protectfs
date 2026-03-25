@@ -35,9 +35,13 @@ See diagrams:
 ### Runtime env (v1 bring-up)
 V1 currently uses an explicit bring-up gate to fail closed unless authorized:
 - `OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1` enables encrypted-path access checks.
-- `OCPROTECTFS_KEK_B64` must be set to a base64 32-byte KEK for encryption.
 
-(These env gates are placeholders for bring-up/testing. They are **not** the final security boundary; the intended boundary is wrapper+gateway liveness + PID/binary identity checks enforced at the FUSE layer.)
+KEK handling (PLAN 19):
+- The wrapper retrieves/creates the 32-byte KEK from **macOS Keychain** (`service=ocprotectfs`, `account=kek`).
+- The wrapper passes the KEK to the FUSE daemon via an **anonymous pipe FD** (`ocprotectfs-fuse --kek-fd <n>`).
+- `OCPROTECTFS_KEK_B64` is **legacy/testing-only** and should not be used in production runs.
+
+(Env gates are placeholders for bring-up/testing. They are **not** the final security boundary; the intended boundary is wrapper+gateway liveness + PID/binary identity checks enforced at the FUSE layer.)
 
 ## Run
 ### First run / migration
