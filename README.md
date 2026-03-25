@@ -33,6 +33,34 @@ node wrapper/ocprotectfs.js --help
 # then run the real invocation (see "Start wrapper" below)
 ```
 
+Optional (recommended for ops clarity): **pre-create / reset the KEK in Keychain**.
+
+The wrapper will auto-create the item if missing, but being explicit makes bring-up and troubleshooting easier.
+
+```bash
+# 1) Generate a fresh 32-byte random key, stored as base64 text
+KEK_B64="$(python3 - <<'PY'
+import os, base64
+print(base64.b64encode(os.urandom(32)).decode())
+PY
+)"
+
+# 2) Store it in the *login* Keychain as a generic password item
+security add-generic-password -U -s ocprotectfs -a kek -w "$KEK_B64"
+
+# 3) Verify it round-trips to 32 bytes
+python3 - <<'PY'
+import base64, subprocess
+b64 = subprocess.check_output(['security','find-generic-password','-s','ocprotectfs','-a','kek','-w']).decode().strip()
+b = base64.b64decode(b64)
+print('OK' if len(b)==32 else f'BAD length: {len(b)}')
+PY
+
+# If you need to rotate/reset:
+# security delete-generic-password -s ocprotectfs -a kek
+# (then re-run the add-generic-password command above)
+```
+
 4) Quick verify (plaintext vs ciphertext):
 
 ```bash
@@ -187,7 +215,11 @@ Run the wrapper which mounts FUSE and starts the gateway.
 (Exact command names/flags are in-repo; this README is the single operator entrypoint.)
 
 ## Secrets / key storage
-- **KEK**: stored in macOS Keychain (never written to disk)
+- **KEK** (Key Encryption Key): stored in macOS Keychain as a **generic password** item
+  - service: `ocprotectfs`
+  - account: `kek`
+  - value: **base64-encoded 32-byte random key** (so arbitrary bytes round-trip)
+  - created automatically by the wrapper if missing (or you can pre-provision it; see TL;DR above)
 - **DEKs**: per-file, wrapped by KEK and stored in `*.ocpfs.dek` sidecars in the backstore
 - **Ciphertext**: stored in `~/.openclaw.real` for all non-workspace paths
 
