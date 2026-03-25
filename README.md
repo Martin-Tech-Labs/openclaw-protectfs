@@ -10,6 +10,8 @@ macFUSE-based protective filesystem overlay for OpenClaw on macOS.
 - **V1: COMPLETE** (see `tasks/STATUS.md` for the canonical tracker)
 - Recommendation: disable the protectfs repo heartbeat cron unless you want post-V1 verification/backlog work.
 
+**Final bookkeeping:** V1 is complete; this repo loop can be disabled.
+
 ## What problem this solves
 OpenClaw stores sensitive data under `~/.openclaw` (sessions, profiles, internal state). Tools and other same-user processes can often read those files.
 
