@@ -1,5 +1,6 @@
 const childProcess = require('node:child_process');
 const os = require('node:os');
+const path = require('node:path');
 
 // Minimal Keychain abstraction for initial.
 //
@@ -93,6 +94,63 @@ class MacOSSecurityCliKeychain {
   }
 }
 
+class MacOSSwiftKeychain {
+  constructor(opts = {}) {
+    this.swiftBin = opts.swiftBin || 'swift';
+    this.scriptPath =
+      opts.scriptPath || path.join(__dirname, '..', 'scripts', 'generic_keychain.swift');
+
+    // Dependency injection for tests.
+    this._execFileSync = opts.execFileSync || childProcess.execFileSync;
+    this._platform = opts.platform || os.platform;
+
+    // Default: require interactive user presence for reads/writes.
+    this.requireUserPresence = opts.requireUserPresence !== undefined ? opts.requireUserPresence : true;
+  }
+
+  _ensureDarwin() {
+    const p = typeof this._platform === 'function' ? this._platform() : this._platform;
+    if (p !== 'darwin') {
+      throw new Error(`macOS Keychain backend requires macOS (process.platform=${p})`);
+    }
+  }
+
+  async getGenericPassword({ service, account }) {
+    this._ensureDarwin();
+
+    const out = this._execFileSync(this.swiftBin, [this.scriptPath, 'get', '--service', service, '--account', account], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    const parsed = JSON.parse(out.toString('utf8'));
+    if (parsed.dataB64 === null) return null;
+    if (!parsed.dataB64) throw new Error('generic_keychain.swift get: missing dataB64');
+    return Buffer.from(parsed.dataB64, 'base64');
+  }
+
+  async setGenericPassword({ service, account, secret }) {
+    this._ensureDarwin();
+    if (!Buffer.isBuffer(secret)) throw new Error('secret must be a Buffer');
+
+    this._execFileSync(
+      this.swiftBin,
+      [
+        this.scriptPath,
+        'set',
+        '--service',
+        service,
+        '--account',
+        account,
+        '--data-b64',
+        secret.toString('base64'),
+        '--require-user-presence',
+        this.requireUserPresence ? '1' : '0',
+      ],
+      { stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+  }
+}
+
 async function getOrCreateKey32({ keychain, service, account, createRandomKey32 }) {
   if (!keychain) throw new Error('keychain required');
   if (!service || !account) throw new Error('service and account required');
@@ -113,5 +171,6 @@ async function getOrCreateKey32({ keychain, service, account, createRandomKey32 
 module.exports = {
   InMemoryKeychain,
   MacOSSecurityCliKeychain,
+  MacOSSwiftKeychain,
   getOrCreateKey32,
 };
