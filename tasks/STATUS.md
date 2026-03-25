@@ -26,15 +26,10 @@ Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
 - **PLAN 21-testability-di-keychain** — formalized Keychain/KEK DI points (explicit keychain instance + injectable `getOrCreateKey32`) and added test coverage for the DI boundary.
 - **PLAN 20-repo-layout-tests** — repo layout already in src/ + test/ + acceptance/ (wrapper + fusefs); README updated to document layout + test commands.
 - **PLAN 19-keychain-kek-e2e** — merged as PR **#49** (Keychain KEK + FD handoff; no env secret).
+- **PLAN 25-license-badges** — done (MIT LICENSE + README badges), merged as PR **#53**.
 
 ## Backlog (queued)
-- PLAN 22-coverage-improvements: add coverage tooling + thresholds; expand tests to raise coverage
-- PLAN 23-owasp-pass-fixes: OWASP-oriented review + fixes + document remaining limitations
-- PLAN 24-macos-ci-strategy: add macos CI job + clarify macFUSE runner constraints; optional self-hosted runner path
-
-- PLAN 25-license-badges: add MIT LICENSE + README badges (CI/license)
-
-- PLAN 26-remove-v1-references: remove v1 references in code/docs; keep only real format/version markers
+- (none — see “Post-PLAN 19 verification” checklist above)
 
 ## Final bookkeeping
 - This file/README now explicitly declare **V1: COMPLETE**.
