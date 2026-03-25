@@ -1,6 +1,6 @@
 # PLAN (canonical)
 
-This file is the canonical plan Martin expects to track readiness for v1.
+This file is the canonical plan Martin expects to track readiness for initial.
 
 ## Canonical tasks (Martin)
 - 00-design.md
@@ -27,8 +27,8 @@ The repo started with a slightly different numbering. Map what is already done:
 - Repo Task 04-encryption-impl (PR #8): corresponds to **PLAN 03-encryption** (done)
   - https://github.com/Martin-Tech-Labs/openclaw-protectfs/pull/8
 
-## V1 ready — definition
-V1 is considered "ready" when:
+## Initial ready — definition
+Initial is considered "ready" when:
 - Wrapper + FUSE can mount over `~/.openclaw` backed by `~/.openclaw.real`.
 - Plaintext passthrough works for `workspace/**` and `workspace-joao/**`.
 - All other paths are encrypted at rest in backstore.
@@ -57,6 +57,6 @@ V1 is considered "ready" when:
 
 - PLAN 25-license-badges: add MIT LICENSE + README badges (CI/license)
 
-- PLAN 26-remove-v1-references: remove v1 references in code/docs; keep only real format/version markers
+- PLAN 26-remove-initial-references: remove initial references in code/docs; keep only real format/version markers
 
 - PLAN 27-readme-tldr-setup: add README TL;DR with clone/build/install/migrate/keychain/run/verify/rollback steps

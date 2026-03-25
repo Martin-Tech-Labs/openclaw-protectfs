@@ -39,5 +39,5 @@ Run:
 - `npm test`
 
 Files:
-- `fusefs/src/core-v1.js`
+- `fusefs/src/core.js`
 - `fusefs/test/core-acceptance.test.js`

@@ -1,6 +1,6 @@
-const { classifyPath } = require('./policy-v1');
+const { classifyPath } = require('./policy');
 
-// Task 09 — FUSE core access control (v1)
+// Task 09 — FUSE core access control
 //
 // This is a *logic-only* “core” for ProtectFS FUSE operations.
 // It decides whether an operation should be allowed or denied based on:

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-// Task 14: macFUSE mount wiring for policy-v1 + core-v1 authZ + crypto-v1 encrypted-at-rest.
+// Task 14: macFUSE mount wiring for policy + core authZ + crypto encrypted-at-rest.
 //
 // Contract with wrapper:
 // - print a single line "READY" only after a successful mount
 // - remain alive until terminated, and attempt a clean unmount on SIGINT/SIGTERM
 //
-// v1 policy summary:
+// initial policy summary:
 // - workspace/** + workspace-joao/** => plaintext passthrough
 // - everything else => encrypted-at-rest, and requires gateway access checks
 //
@@ -20,7 +20,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 
-const { makeFuseOps } = require('./src/fuse-ops-v1');
+const { makeFuseOps } = require('./src/fuse-ops');
 
 function defaultBackstore() {
   return path.join(os.homedir(), '.openclaw.real');

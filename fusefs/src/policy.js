@@ -2,7 +2,7 @@ const path = require('node:path');
 
 // Task 04 — Path policy + safety helpers.
 //
-// This module defines the v1 *path classification* rules for ProtectFS.
+// This module defines the initial *path classification* rules for ProtectFS.
 // It is intentionally independent of macFUSE bindings so it can be unit tested.
 //
 // Policy (from tasks/01-design.md):
@@ -88,7 +88,7 @@ function classifyPath(rel, opts = {}) {
       rel: clean,
       storage: 'plaintext',
       // Plaintext paths are intended for collaborative/dev content.
-      // Access control for them is out-of-scope for v1.
+      // Access control for them is out-of-scope for initial.
       requiresGatewayAccessChecks: false,
       reason: 'passthrough prefix',
     };

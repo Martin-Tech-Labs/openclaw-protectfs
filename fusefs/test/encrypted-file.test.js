@@ -5,9 +5,9 @@ const path = require('node:path');
 const os = require('node:os');
 const crypto = require('node:crypto');
 
-const { readEncryptedFile, writeEncryptedFile, sidecarDekPath } = require('../src/encrypted-file-v1');
+const { readEncryptedFile, writeEncryptedFile, sidecarDekPath } = require('../src/encrypted-file');
 
-test('encrypted-file-v1: writes ciphertext + sidecar, reads back plaintext', () => {
+test('encrypted-file: writes ciphertext + sidecar, reads back plaintext', () => {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'ocpfs-enc-'));
   const realPath = path.join(base, 'secret.txt');
 

@@ -1,4 +1,4 @@
-# Operator Guide (v1)
+# Operator Guide
 
 This guide explains how to install, configure, and run **openclaw-protectfs**.
 
@@ -29,11 +29,11 @@ See diagrams:
 
 ## Configure
 ### KEK (Key Encryption Key)
-- Stored in **macOS Keychain** (v1)
+- Stored in **macOS Keychain**
 - Access requires **user presence** (password prompt on Mac mini)
 
-### Runtime env (v1 bring-up)
-V1 currently uses an explicit bring-up gate to fail closed unless authorized:
+### Runtime env (initial bring-up)
+Initial currently uses an explicit bring-up gate to fail closed unless authorized:
 - `OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1` enables encrypted-path access checks.
 
 KEK handling (PLAN 19):

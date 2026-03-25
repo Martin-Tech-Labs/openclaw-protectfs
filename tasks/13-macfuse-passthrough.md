@@ -12,7 +12,7 @@ This is the smallest possible step that proves:
 
 ## Why
 
-V1 readiness (see `tasks/12-macfuse-integration.md` + `docs/design-v1.md`) requires an actual filesystem mount.
+Initial readiness (see `tasks/12-macfuse-integration.md` + `docs/design.md`) requires an actual filesystem mount.
 The repo already has a strong wrapper lifecycle contract (`docs/wrapper-lifecycle.md`) but the FUSE process was only a keepalive stub.
 
 ## Scope
@@ -25,8 +25,8 @@ The repo already has a strong wrapper lifecycle contract (`docs/wrapper-lifecycl
 - Ensure clean-ish shutdown behavior on SIGINT/SIGTERM (best-effort unmount)
 
 Non-goals:
-- `core-v1` authZ enforcement
-- `crypto-v1` encrypted-at-rest behavior
+- `core` authZ enforcement
+- `crypto` encrypted-at-rest behavior
 - perfect coverage of all macOS filesystem edge cases (xattrs, symlinks, etc.)
 
 ## Acceptance criteria

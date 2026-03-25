@@ -5,7 +5,7 @@
 The repository currently has strong *logic-only* modules (policy, crypto, core authorization) and a robust wrapper lifecycle.
 However, `fusefs/ocprotectfs-fuse.js` is still a placeholder that **does not mount a filesystem**.
 
-V1 readiness in `docs/design-v1.md` requires an actual FUSE daemon that:
+Initial readiness in `docs/design.md` requires an actual FUSE daemon that:
 - mounts over `~/.openclaw` backed by `~/.openclaw.real`
 - enforces plaintext passthrough vs encrypted-at-rest paths
 - enforces strict gateway-only access checks for sensitive operations
@@ -16,8 +16,8 @@ This task is a **spike + concrete plan** for getting a real macFUSE mount into p
 
 Choose an implementation strategy for the FUSE daemon on macOS and define an incremental path to:
 1) mount successfully (passthrough)
-2) wire in `core-v1` authorization
-3) wire in `crypto-v1` for encrypted-at-rest files
+2) wire in `core` authorization
+3) wire in `crypto` for encrypted-at-rest files
 4) add best-effort acceptance tests
 
 ## Constraints / assumptions
@@ -37,7 +37,7 @@ Use a Node library that binds to libfuse / macFUSE.
 
 Pros:
 - keep most code in Node (aligns with current repo)
-- easy to call existing JS modules (`policy-v1`, `crypto-v1`, `core-v1`)
+- easy to call existing JS modules (`policy`, `crypto`, `core`)
 
 Cons / unknowns:
 - macOS support quality varies by library
@@ -59,13 +59,13 @@ Cons:
 - need to design/secure IPC protocol
 
 ### Option C — Defer true mount; ship “ProtectFS as policy toolkit”
-Make it explicit that v1 is **logic-only** and does not provide an actual mounted filesystem.
+Make it explicit that initial is **logic-only** and does not provide an actual mounted filesystem.
 
 Pros:
 - lowest effort
 
 Cons:
-- does not satisfy the v1 readiness definition in `docs/design-v1.md`
+- does not satisfy the initial readiness definition in `docs/design.md`
 
 ## Spike report (decision)
 
@@ -76,7 +76,7 @@ Proceed with **Option A** using **`fuse-native`** as the binding.
 Rationale:
 - Explicit macOS support (docs mention macOS options like `displayFolder` and OSXFUSE/macFUSE licensing).
 - N-API support (prebuilds are commonly shipped; reduces friction across Node versions).
-- API is a direct fit for this repo: a single Node process implements handlers and can call `core-v1` / `crypto-v1` in-process (no IPC).
+- API is a direct fit for this repo: a single Node process implements handlers and can call `core` / `crypto` in-process (no IPC).
 
 Notes / caveats to plan around:
 - Still requires macFUSE to be installed and configured on developer machines.
@@ -111,7 +111,7 @@ Plan:
   - print `READY` only inside the `mount()` callback (i.e. after a successful mount).
   - ensure errors print a single-line error + exit non-zero.
 
-### Step 2: `core-v1` authorization hooks
+### Step 2: `core` authorization hooks
 
 Goal: deny sensitive operations unless the wrapper/gateway is considered “the caller”.
 
@@ -128,14 +128,14 @@ Plan:
 Future hardening (only if binding supports it):
 - Stronger “caller identity” using request context (PID/uid/gid) + allowlist.
 
-### Step 3: encrypted-at-rest for non-plaintext paths (`crypto-v1`)
+### Step 3: encrypted-at-rest for non-plaintext paths (`crypto`)
 
 Goal: plaintext for allowed paths; encrypted backing store for everything else.
 
 Plan:
 - Plaintext paths: direct passthrough to backstore.
 - Encrypted paths:
-  - in backstore store ciphertext format defined in `docs/design-v1.md` (`OCFS1` + AES-256-GCM).
+  - in backstore store ciphertext format defined in `docs/design.md` (`OCFS1` + AES-256-GCM).
   - implement read path: read ciphertext file → decrypt → serve plaintext bytes.
   - implement write path: buffer writes (or block-aligned strategy) → encrypt → write ciphertext.
 
