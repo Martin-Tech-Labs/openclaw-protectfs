@@ -3,16 +3,38 @@ on:
   pull_request:
   push:
     branches: [ main ]
+
 jobs:
-  basic:
-    runs-on: ubuntu-latest
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
     steps:
       - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
       - name: Smoke
         run: |
           echo "CI baseline OK"
           test -f README.md
           test -f tasks/STATUS.md
           test -f tasks/00-scaffold.md
+
       - name: Make test
+        # Note: real macFUSE mount acceptance tests are opt-in and require macFUSE.
+        # GitHub-hosted macOS runners cannot reliably install/enable macFUSE, so CI runs unit-style tests only.
+        env:
+          OCPROTECTFS_RUN_REAL_MOUNT_TESTS: "0"
         run: make test
