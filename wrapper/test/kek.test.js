@@ -64,6 +64,34 @@ test('kek: resolveKek uses keychain on darwin non-CI via DI factory', async () =
   assert.notEqual(out.kek, gotCreateRandomKey32);
 });
 
+test('kek: resolveKek prefers explicit keychain + allows injecting getOrCreateKey32', async () => {
+  const calls = [];
+  const fakeKeychain = {
+    getGenericPassword: async () => null,
+    setGenericPassword: async () => {},
+  };
+
+  const out = await resolveKek({
+    platform: 'darwin',
+    env: { CI: 'false' },
+    randomBytes: () => fixedKey32(0x55),
+    keychain: fakeKeychain,
+    keychainFactory: () => {
+      throw new Error('keychainFactory should not be called when keychain is provided');
+    },
+    getOrCreateKey32: async (args) => {
+      calls.push(args);
+      return fixedKey32(0x66);
+    },
+  });
+
+  assert.equal(out.source, 'keychain');
+  assert.equal(out.kek.length, 32);
+  assert.equal(out.kek[0], 0x66);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].keychain, fakeKeychain);
+});
+
 test('kek: writeKekToPipe writes 32 bytes then ends', async () => {
   const kek = fixedKey32(0x44);
   const s = new PassThrough();
