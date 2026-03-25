@@ -151,6 +151,8 @@ Some bring-up flows use explicit env gates for testing (e.g. allowing gateway ac
 ### Running tests
 ```bash
 npm test
+# or:
+make test
 ```
 
 Coverage (Node test runner):
