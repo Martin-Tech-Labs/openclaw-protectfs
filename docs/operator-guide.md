@@ -20,7 +20,7 @@ See diagrams:
 ## Prerequisites
 - macOS
 - macFUSE installed + enabled
-- Node.js (matches your OpenClaw install; wrapper uses node runtime)
+- Node.js (matches your OpenClaw install; supervisor uses node runtime)
 
 ## Install
 1) Clone repo
@@ -34,14 +34,14 @@ See diagrams:
 
 ### Runtime env (initial bring-up)
 Initial currently uses an explicit bring-up gate to fail closed unless authorized:
-- Encrypted-path access checks fail closed unless the wrapper liveness socket (`OCPROTECTFS_LIVENESS_SOCK`) is present.
+- Encrypted-path access checks fail closed unless the supervisor liveness socket (`OCPROTECTFS_LIVENESS_SOCK`) is present.
 
 KEK handling (PLAN 19):
-- The wrapper retrieves/creates the 32-byte KEK from **macOS Keychain** (`service=ocprotectfs`, `account=kek`).
-- The wrapper passes the KEK to the FUSE daemon via an **anonymous pipe FD** (`ocprotectfs-fuse --kek-fd <n>`).
+- The supervisor retrieves/creates the 32-byte KEK from **macOS Keychain** (`service=ocprotectfs`, `account=kek`).
+- The supervisor passes the KEK to the FUSE daemon via an **anonymous pipe FD** (`ocprotectfs-fuse --kek-fd <n>`).
 - `OCPROTECTFS_KEK_B64` is **legacy/testing-only** and should not be used in production runs.
 
-(Env gates are placeholders for bring-up/testing. They are **not** the final security boundary; the intended boundary is wrapper+gateway liveness + PID/binary identity checks enforced at the FUSE layer.)
+(Env gates are placeholders for bring-up/testing. They are **not** the final security boundary; the intended boundary is supervisor+gateway liveness + PID/binary identity checks enforced at the FUSE layer.)
 
 ## Run
 ### First run / migration
@@ -49,7 +49,7 @@ KEK handling (PLAN 19):
 - A marker file prevents repeated migration.
 
 ### Start supervisor
-Run the supervisor (wrapper entrypoint) which mounts FUSE and starts the gateway.
+Run the supervisor (supervisor entrypoint) which mounts FUSE and starts the gateway.
 
 ## Secrets and what is encrypted
 ### Encrypted at rest
@@ -62,11 +62,11 @@ Per-file wrapped DEKs are stored as `*.ocpfs.dek` in the backstore and hidden fr
 The KEK lives in Keychain (never written to disk).
 
 ## Troubleshooting
-- If mount fails, wrapper should fail closed and avoid starting the gateway.
-- Use the best-effort unmount commands printed by the wrapper logs.
+- If mount fails, supervisor should fail closed and avoid starting the gateway.
+- Use the best-effort unmount commands printed by the supervisor logs.
 
 ## Rollback
-- Stop wrapper
+- Stop supervisor
 - Unmount
 - Move `~/.openclaw.real` back to `~/.openclaw` if needed
 

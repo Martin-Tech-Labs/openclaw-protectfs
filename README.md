@@ -26,7 +26,7 @@ npm install
 
 The supervisor **supervises two long-running processes**:
 - the FUSE daemon (this repo): `fusefs/ocprotectfs-fuse.js`
-- your OpenClaw gateway process (must stay running; wrapper will shut down the mount if it exits)
+- your OpenClaw gateway process (must stay running; supervisor will shut down the mount if it exits)
 
 If you just want to validate the mount + encryption behavior **without** starting OpenClaw yet, you can use a dummy gateway (`/bin/sleep`) for a smoke test:
 
@@ -41,7 +41,7 @@ node wrapper/ocprotectfs.js \
 
 Notes:
 - The KEK (Key Encryption Key) is retrieved/created in macOS Keychain (`service=ocprotectfs`, `account=kek`).
-- The wrapper passes the KEK to the FUSE daemon **in-memory via an anonymous pipe** (no env secret).
+- The supervisor passes the KEK to the FUSE daemon **in-memory via an anonymous pipe** (no env secret).
 - For a real deployment, replace the dummy gateway with the command that runs your OpenClaw gateway in the foreground.
 
 Optional (advanced): **reset the KEK in Keychain**.
@@ -106,7 +106,7 @@ This project provides a **path-compatible** mount over `~/.openclaw` that:
   - obtains the Key Encryption Key (KEK) from macOS Keychain (user presence)
   - mounts the FUSE filesystem at `~/.openclaw`
   - starts OpenClaw gateway as a child process
-  - maintains a liveness socket so the FUSE layer can fail-closed if wrapper/gateway die
+  - maintains a liveness socket so the FUSE layer can fail-closed if supervisor/gateway die
 
 - **FUSE daemon (`ocprotectfs-fuse`)**
   - implements filesystem operations (getattr/readdir/open/read/write/rename/unlink/…)
@@ -141,7 +141,7 @@ In this project, macFUSE routes file operations on `~/.openclaw` into our FUSE d
   - each encrypted file has a wrapped per-file DEK sidecar `*.ocpfs.dek` (hidden from mount)
 
 - Fail-closed rules for encrypted paths
-  - deny access unless wrapper/gateway checks pass (initial currently includes bring-up gating; see Security notes)
+  - deny access unless supervisor/gateway checks pass (initial currently includes bring-up gating; see Security notes)
 
 ## Architecture diagram
 ```mermaid
@@ -219,7 +219,7 @@ Notes:
 ### First run / migration (don’t lose your pre-existing `~/.openclaw`)
 When ProtectFS first mounts at `~/.openclaw`, any **pre-existing** content that was already in `~/.openclaw` would otherwise become **hidden under the mount**.
 
-To avoid that, the wrapper performs a one-time migration step **before mounting**:
+To avoid that, the supervisor performs a one-time migration step **before mounting**:
 
 - Moves existing entries out of `~/.openclaw` into:
   - `~/.openclaw.real/.legacy-openclaw/<timestamp>/...`
@@ -231,7 +231,7 @@ To avoid that, the wrapper performs a one-time migration step **before mounting*
 If you ever need to inspect what got moved, look in the `.legacy-openclaw/` directory in the backstore.
 
 ### Start supervisor
-Run the supervisor (wrapper entrypoint) which mounts FUSE and starts the gateway.
+Run the supervisor (supervisor entrypoint) which mounts FUSE and starts the gateway.
 
 (Exact command names/flags are in-repo; this README is the single operator entrypoint.)
 
@@ -240,12 +240,12 @@ Run the supervisor (wrapper entrypoint) which mounts FUSE and starts the gateway
   - service: `ocprotectfs`
   - account: `kek`
   - value: **base64-encoded 32-byte random key** (so arbitrary bytes round-trip)
-  - created automatically by the wrapper if missing (or you can pre-provision it; see TL;DR above)
+  - created automatically by the supervisor if missing (or you can pre-provision it; see TL;DR above)
 - **DEKs**: per-file, wrapped by KEK and stored in `*.ocpfs.dek` sidecars in the backstore
 - **Ciphertext**: stored in `~/.openclaw.real` for all non-workspace paths
 
 ## Security notes
-Some bring-up flows use explicit env gates for testing (e.g. allowing gateway access checks). Those are not intended as the final trust boundary; the intended boundary is wrapper/gateway liveness + identity checks enforced at the FUSE layer.
+Some bring-up flows use explicit env gates for testing (e.g. allowing gateway access checks). Those are not intended as the final trust boundary; the intended boundary is supervisor/gateway liveness + identity checks enforced at the FUSE layer.
 
 OWASP-oriented hardening notes (PLAN 23):
 - All FUSE ops must enforce access checks consistently (no “authz then still do the syscall” footguns).
@@ -268,8 +268,8 @@ Known limitations / non-goals:
   - workflow: `.github/workflows/macos-real-mount.yml` (manual `workflow_dispatch`)
 
 ## Repo layout (code + tests)
-- `wrapper/src/**` — wrapper implementation
-- `wrapper/test/**` — unit-style tests for wrapper
+- `wrapper/src/**` — supervisor implementation
+- `wrapper/test/**` — unit-style tests for supervisor
 - `wrapper/acceptance/**` — opt-in real-mount acceptance tests (macOS + macFUSE)
 
 - `fusefs/src/**` — FUSE implementation
@@ -302,10 +302,10 @@ CI=1 OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 npm test
 
 ### Environment variables
 Wrapper-provided:
-- `OCPROTECTFS_LIVENESS_SOCK`: unix socket path created by the wrapper and passed to child processes. Encrypted-path operations fail closed unless this socket is present.
+- `OCPROTECTFS_LIVENESS_SOCK`: unix socket path created by the supervisor and passed to child processes. Encrypted-path operations fail closed unless this socket is present.
 
 KEK handling (recommended):
-- Default (v1): wrapper retrieves/creates KEK from macOS Keychain (`service=ocprotectfs`, `account=kek`).
+- Default (v1): supervisor retrieves/creates KEK from macOS Keychain (`service=ocprotectfs`, `account=kek`).
 - Opt-in (v2): set `OCPROTECTFS_KEK_V2=1` to store a *wrapped* KEK in Keychain (`service=ocprotectfs`, `account=kek.v2.wrapped`) and unwrap it via a Keychain-held **non-exportable** RSA private key (tag: `ocprotectfs.kekwrap.v2`).
   - This avoids persisting the raw KEK as an exportable Keychain secret.
   - Migration/rollback: v2 does not read the v1 `kek` item; to reset, delete the `kek.v2.wrapped` item (and the `ocprotectfs.kekwrap.v2` keypair if desired).
@@ -322,7 +322,7 @@ Wrapper entrypoint:
 node wrapper/ocprotectfs.js --help
 ```
 
-Smoke-test invocation (mount + encrypt/decrypt behavior, with a dummy gateway that just keeps the wrapper alive):
+Smoke-test invocation (mount + encrypt/decrypt behavior, with a dummy gateway that just keeps the supervisor alive):
 
 ```bash
 node wrapper/ocprotectfs.js \
@@ -335,13 +335,13 @@ node wrapper/ocprotectfs.js \
 
 Real deployment:
 - Use the same `--fuse-*` flags as above.
-- Replace `--gateway-bin/--gateway-arg` with the command that runs your OpenClaw gateway **in the foreground** (the wrapper supervises it; if it exits, the wrapper will unmount and fail closed).
+- Replace `--gateway-bin/--gateway-arg` with the command that runs your OpenClaw gateway **in the foreground** (the supervisor supervises it; if it exits, the supervisor will unmount and fail closed).
 
 ## Safety / rollback
 
 To stop and roll back:
-1) Stop the wrapper process (SIGINT / SIGTERM).
-2) Ensure the mount is unmounted (`umount ~/.openclaw` or the wrapper's best-effort unmount).
+1) Stop the supervisor process (SIGINT / SIGTERM).
+2) Ensure the mount is unmounted (`umount ~/.openclaw` or the supervisor's best-effort unmount).
 3) If you need to restore the original directory layout:
    - move `~/.openclaw` aside
    - move `~/.openclaw.real` back to `~/.openclaw`
