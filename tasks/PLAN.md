@@ -46,3 +46,11 @@ V1 is considered "ready" when:
 - PLAN 17-readme-operator-guide: README + diagrams + operator instructions
 
 - PLAN 19-keychain-kek-e2e: wire KEK retrieval/storage via macOS Keychain (user presence) and pass KEK to FUSE without env; update docs
+
+
+## Follow-up hardening / maintainability
+- PLAN 20-repo-layout-tests: restructure into src/ + test/ + acceptance tests folder; README test instructions
+- PLAN 21-testability-di-keychain: formalize IKeychain + DI/mocking for keychain/process boundaries; add integration tests
+- PLAN 22-coverage-improvements: add coverage tooling + thresholds; expand tests to raise coverage
+- PLAN 23-owasp-pass-fixes: OWASP-oriented review + fixes + document remaining limitations
+- PLAN 24-macos-ci-strategy: add macos CI job + clarify macFUSE runner constraints; optional self-hosted runner path
