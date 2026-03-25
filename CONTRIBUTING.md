@@ -33,3 +33,20 @@ Joao must cross-check each PR against the linked issue acceptance criteria.
 - If the implementation is **partial/incomplete**, Joao must **refuse approval**.
 - In this case, the **"max 2 review rounds" rule does not apply**: incomplete work cannot be approved.
 - Alternative: request the author create a follow-up issue (and ensure the PR uses `Refs #...` not closing keywords).
+
+## Scaffold / phased PRs (allowed, but must not block progress)
+
+We allow scaffold/phased PRs **only** when they are explicitly treated as incremental building blocks.
+
+Rules:
+- A scaffold/phased PR **must not** use closing keywords (`Closes/Fixes/Resolves #n`). Use `Refs #n`.
+- A scaffold/phased PR **must** include a "Follow-up issues" section listing the remaining work as issue numbers.
+- Joao must refuse approval if a scaffold PR is missing follow-up issues.
+
+## CHANGES_REQUESTED is not a terminal state
+
+If Joao marks a PR as **CHANGES_REQUESTED**, Toby must attempt to resolve the requested changes:
+- If changes are straightforward: implement + push commits.
+- If changes require large scope: split into follow-up issues and reduce the PR scope so it can be completed.
+
+**No blocking rule:** the process must always make forward progress (merge a correct incremental PR and keep the parent issue open), rather than leaving PRs stuck indefinitely.
