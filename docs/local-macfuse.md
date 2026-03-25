@@ -45,10 +45,14 @@ If `fuse-native` fails to build, check:
 
 ## Running the tests
 
-Real-mount tests are **opt-in** to keep `npm test` reliable by default.
+Real-mount tests run **by default** on macOS when prerequisites exist.
+
+If you’re on a very new Node major and `fuse-native` is unstable, the suite may auto-skip unless you force it with `OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1`.
+
+In CI they are skipped unless explicitly enabled:
 
 ```bash
-OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 npm test
+CI=1 OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 npm test
 ```
 
 Real-mount tests should either:
