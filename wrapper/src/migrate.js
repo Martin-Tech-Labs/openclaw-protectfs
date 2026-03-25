@@ -44,7 +44,7 @@ function migrateLegacyOpenclaw({ mountpoint, backstore, now = () => new Date() }
   }
 
   // If a previous migration was interrupted, fail closed. We do not try to
-  // auto-resume in v1 because we want deterministic, inspectable behavior.
+  // auto-resume in initial because we want deterministic, inspectable behavior.
   if (fs.existsSync(inProgressPath)) {
     const state = readJsonIfExists(inProgressPath);
     return {

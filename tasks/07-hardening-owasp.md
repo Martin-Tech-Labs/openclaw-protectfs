@@ -29,7 +29,7 @@ This task is intentionally checklist-driven. Prefer changes that are low-risk, m
 - [ ] Ensure logs never print secrets / key material / unredacted paths that may contain usernames (keep practical; don’t over-sanitize).
 
 ### FUSE shim / core
-- [ ] Ensure all user-controlled paths are normalized and validated (already have `policy-v1` helpers; confirm coverage for edge cases).
+- [ ] Ensure all user-controlled paths are normalized and validated (already have `policy` helpers; confirm coverage for edge cases).
 - [ ] Ensure deny-by-default on unexpected operations.
 - [ ] Ensure any temporary files are created safely (`mkdtemp`, no predictable names).
 

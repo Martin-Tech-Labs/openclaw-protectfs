@@ -1,7 +1,7 @@
 # PLAN 17 — README + operator guide (install/run/secrets/diagrams)
 
 ## Goal
-Make **v1** operable by someone who didn’t write the code:
+Make **initial** operable by someone who didn’t write the code:
 
 - A clear top-level README that points to the right docs.
 - A concrete operator guide for install/config/run.

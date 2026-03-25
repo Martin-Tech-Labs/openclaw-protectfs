@@ -3,7 +3,7 @@
 ## Goal
 Raise confidence that ProtectFS behaves safely and predictably under common OpenClaw workflows.
 
-## Scope (v1)
+## Scope
 - Add/expand **acceptance-style tests** around wrapper + FUSE skeleton lifecycle:
   - wrapper fails closed when `--require-fuse-ready` and READY is not observed
   - wrapper cleanly shuts down child process groups on signal / child exit

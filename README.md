@@ -65,11 +65,11 @@ OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 npm test
 ```
 
 ## Status
-- **V1: COMPLETE** (see `tasks/STATUS.md` for the canonical tracker)
-- Recommendation: disable the protectfs repo heartbeat cron unless you want post-V1 verification/backlog work.
+- **Initial: COMPLETE** (see `tasks/STATUS.md` for the canonical tracker)
+- Recommendation: disable the protectfs repo heartbeat cron unless you want post-initial verification/backlog work.
 - Last updated: 2026-03-25 (final bookkeeping)
 
-**Final bookkeeping:** V1 is complete; this repo loop can be disabled.
+**Final bookkeeping:** Initial is complete; this repo loop can be disabled.
 
 ## What problem this solves
 OpenClaw stores sensitive data under `~/.openclaw` (sessions, profiles, internal state). Tools and other same-user processes can often read those files.
@@ -106,17 +106,21 @@ This project provides a **path-compatible** mount over `~/.openclaw` that:
 
 In this project, macFUSE routes file operations on `~/.openclaw` into our FUSE daemon, which then enforces policy and reads/writes the backstore.
 
-## Policy (v1)
-- Plaintext passthrough:
-  - `~/.openclaw/workspace/**`
-  - `~/.openclaw/workspace-joao/**`
+## Policy
+- Plaintext passthrough (configurable): selected *top-level prefixes* under the mount.
+  - Default passthrough prefixes (legacy behavior):
+    - `~/.openclaw/workspace/**`
+    - `~/.openclaw/workspace-joao/**`
+  - Configure passthrough prefixes:
+    - FUSE flags (repeatable): `ocprotectfs-fuse --plaintext-prefix workspace --plaintext-prefix workspace-joao`
+    - Or env var (comma-separated): `OCPROTECTFS_PLAINTEXT_PREFIXES=workspace,workspace-joao`
 
 - Encrypted-at-rest (everything else under `~/.openclaw/**`)
   - stored encrypted in `~/.openclaw.real`
   - each encrypted file has a wrapped per-file DEK sidecar `*.ocpfs.dek` (hidden from mount)
 
 - Fail-closed rules for encrypted paths
-  - deny access unless wrapper/gateway checks pass (v1 currently includes bring-up gating; see Security notes)
+  - deny access unless wrapper/gateway checks pass (initial currently includes bring-up gating; see Security notes)
 
 ## Architecture diagram
 ```mermaid
@@ -190,14 +194,14 @@ Run the wrapper which mounts FUSE and starts the gateway.
 - **DEKs**: per-file, wrapped by KEK and stored in `*.ocpfs.dek` sidecars in the backstore
 - **Ciphertext**: stored in `~/.openclaw.real` for all non-workspace paths
 
-## Security notes (v1)
+## Security notes
 Some bring-up flows use explicit env gates for testing (e.g. allowing gateway access checks). Those are not intended as the final trust boundary; the intended boundary is wrapper/gateway liveness + identity checks enforced at the FUSE layer.
 
 OWASP-oriented hardening notes (PLAN 23):
 - All FUSE ops must enforce access checks consistently (no “authz then still do the syscall” footguns).
 - Fail-closed by default for encrypted paths.
 
-Known limitations / non-goals (v1):
+Known limitations / non-goals:
 - The encrypted file implementation currently buffers whole-file plaintext in memory for some operations (large-file DoS potential).
 - Metadata is not fully hidden (e.g. directory structure + filenames exist in the backstore).
 - Logging favors operator debuggability and may include absolute paths.
@@ -242,10 +246,10 @@ To include **real macFUSE mount** acceptance tests locally (opt-in):
 OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 npm test
 ```
 
-## Running (v1)
+## Running
 
 ### Environment variables (bring-up)
-For v1 bring-up there is an explicit gate to fail closed unless authorized:
+For initial bring-up there is an explicit gate to fail closed unless authorized:
 - `OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1`: enables encrypted-path access checks (bring-up/testing gate)
 
 KEK handling (recommended):

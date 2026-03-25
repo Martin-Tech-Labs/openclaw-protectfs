@@ -1,6 +1,6 @@
-const { classifyPath } = require('./policy-v1');
+const { classifyPath } = require('./policy');
 
-// Task 09 — FUSE core access control (v1)
+// Task 09 — FUSE core access control
 //
 // This is a *logic-only* “core” for ProtectFS FUSE operations.
 // It decides whether an operation should be allowed or denied based on:
@@ -46,14 +46,16 @@ function allow(reason) {
  * @param {string} args.rel - POSIX-like relative path (no leading slash)
  * @param {boolean} [args.gatewayAccessAllowed=false] - whether the wrapper/core
  *   has validated gateway identity + liveness for sensitive operations.
+ * @param {string[]} [args.plaintextPrefixes] - configurable plaintext passthrough prefixes
+ *   (top-level segments). If omitted, defaults apply (and env overrides may apply).
  *
  * @returns {{ok: true, reason: string} | {ok: false, code: string, reason: string}}
  */
-function authorizeOp({ op, rel, gatewayAccessAllowed = false }) {
+function authorizeOp({ op, rel, gatewayAccessAllowed = false, plaintextPrefixes }) {
   if (!isKnownOp(op)) return deny('EINVAL', `unknown op: ${String(op)}`);
 
   // classifyPath also enforces rel safety (no traversal, no absolute paths, ...)
-  const cls = classifyPath(rel);
+  const cls = classifyPath(rel, { plaintextPrefixes });
 
   if (!cls.requiresGatewayAccessChecks) {
     return allow(`policy: plaintext (${cls.reason})`);

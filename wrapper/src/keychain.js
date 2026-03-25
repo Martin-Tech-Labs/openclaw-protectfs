@@ -1,7 +1,7 @@
 const childProcess = require('node:child_process');
 const os = require('node:os');
 
-// Minimal Keychain abstraction for v1.
+// Minimal Keychain abstraction for initial.
 //
 // In production on macOS, this can use the `security` CLI to read/write a
 // generic password item. In tests, use the InMemoryKeychain.

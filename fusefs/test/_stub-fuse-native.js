@@ -23,7 +23,7 @@ class FakeFuse {
   }
 }
 
-// Minimal errno constants used by fuse-ops-v1.
+// Minimal errno constants used by fuse-ops.
 FakeFuse.EACCES = 13;
 FakeFuse.ENOENT = 2;
 FakeFuse.EPERM = 1;

@@ -58,6 +58,12 @@ function parseArgs(argv) {
         cfg.gatewayArgs.push(next());
         break;
 
+      case '--plaintext-prefix': {
+        const p = next();
+        cfg.fuseArgs.push('--plaintext-prefix', p);
+        break;
+      }
+
       case '--require-fuse-ready':
         cfg.requireFuseReady = true;
         break;
@@ -96,6 +102,7 @@ Flags:
 
   --fuse-bin <path>            FUSE daemon binary (placeholder in Task 02)
   --fuse-arg <arg>             FUSE arg (repeatable)
+  --plaintext-prefix <p>        Convenience: add a FUSE passthrough prefix (repeatable)
 
   --gateway-bin <path>         Gateway binary (placeholder in Task 02)
   --gateway-arg <arg>          Gateway arg (repeatable)

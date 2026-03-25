@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-// Task 14: macFUSE mount wiring for policy-v1 + core-v1 authZ + crypto-v1 encrypted-at-rest.
+// Task 14: macFUSE mount wiring for policy + core authZ + crypto encrypted-at-rest.
 //
 // Contract with wrapper:
 // - print a single line "READY" only after a successful mount
 // - remain alive until terminated, and attempt a clean unmount on SIGINT/SIGTERM
 //
-// v1 policy summary:
+// initial policy summary:
 // - workspace/** + workspace-joao/** => plaintext passthrough
 // - everything else => encrypted-at-rest, and requires gateway access checks
 //
@@ -20,7 +20,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 
-const { makeFuseOps } = require('./src/fuse-ops-v1');
+const { makeFuseOps } = require('./src/fuse-ops');
 
 function defaultBackstore() {
   return path.join(os.homedir(), '.openclaw.real');
@@ -35,6 +35,7 @@ function parseArgs(argv) {
     backstore: defaultBackstore(),
     mountpoint: defaultMountpoint(),
     kekFd: null,
+    plaintextPrefixes: null,
   };
 
   const args = argv.slice(2);
@@ -57,6 +58,12 @@ function parseArgs(argv) {
         cfg.kekFd = Number(next());
         if (!Number.isFinite(cfg.kekFd) || cfg.kekFd < 0) throw new Error('--kek-fd must be a non-negative integer');
         break;
+      case '--plaintext-prefix': {
+        const p = next();
+        if (cfg.plaintextPrefixes === null) cfg.plaintextPrefixes = [];
+        cfg.plaintextPrefixes.push(p);
+        break;
+      }
       case '--help':
       case '-h':
         printHelp();
@@ -78,12 +85,14 @@ Usage:
 Flags:
   --backstore <path>   Backstore directory (default ~/.openclaw.real)
   --mountpoint <path>  Mountpoint directory (default ~/.openclaw)
-  --kek-fd <n>         Read 32-byte KEK from the given file descriptor (recommended)
-  -h, --help           Show help
+  --kek-fd <n>           Read 32-byte KEK from the given file descriptor (recommended)
+  --plaintext-prefix <p>  Top-level plaintext passthrough prefix (repeatable)
+  -h, --help             Show help
 
 Environment:
-  OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1  Allow encrypted-path operations (fail-closed default deny)
-  OCPROTECTFS_KEK_B64=<base64>          (legacy) 32-byte KEK, base64-encoded
+  OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1     Allow encrypted-path operations (fail-closed default deny)
+  OCPROTECTFS_PLAINTEXT_PREFIXES=a,b,c     Comma-separated passthrough prefixes (used if no flags provided)
+  OCPROTECTFS_KEK_B64=<base64>             (legacy) 32-byte KEK, base64-encoded
 `);
 }
 
@@ -154,6 +163,7 @@ function main() {
     Fuse,
     gatewayAccessAllowed,
     kek,
+    plaintextPrefixes: cfg.plaintextPrefixes,
   });
 
   const fuse = new Fuse(mountpoint, ops, {

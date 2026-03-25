@@ -1,7 +1,7 @@
-# Task 14 — core-v1 authorization + crypto-v1 encrypted-at-rest wiring
+# Task 14 — core authorization + crypto encrypted-at-rest wiring
 
 ## Goal
-Wire the existing `core-v1` (authorization checks) and `crypto-v1` (encrypted-at-rest) logic into the **real** macFUSE mount path so that:
+Wire the existing `core` (authorization checks) and `crypto` (encrypted-at-rest) logic into the **real** macFUSE mount path so that:
 
 - `workspace/**` and `workspace-joao/**` behave as plaintext passthrough (per policy)
 - all other paths are treated as **encrypted** and **access-checked**
@@ -9,7 +9,7 @@ Wire the existing `core-v1` (authorization checks) and `crypto-v1` (encrypted-at
 
 ## Scope
 - FUSE mount daemon (`fusefs/ocprotectfs-fuse.js`)
-- Policy layer (`policy-v1`) integration as needed
+- Policy layer (`policy`) integration as needed
 - Any glue code required to call gateway checks and apply crypto transforms
 
 ## Non-goals (for this task)
@@ -44,7 +44,7 @@ Wire the existing `core-v1` (authorization checks) and `crypto-v1` (encrypted-at
 ## Notes / risks
 - Careful with errno mapping: operations must return correct negative errno values to avoid confusing apps.
 - Avoid exposing any decrypted bytes to disk (temporary files) during read/write.
-- Current wiring uses env-based stubs for v1 bring-up:
+- Current wiring uses env-based stubs for initial bring-up:
   - `OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1` gates encrypted-path access (default deny).
   - `OCPROTECTFS_KEK_B64` provides the 32-byte KEK (base64) for decrypt/encrypt.
 - Encrypted file content is stored at the same relative backstore path as ciphertext, with a sidecar wrapped-DEK at `*.ocpfs.dek`.

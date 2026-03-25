@@ -1,7 +1,7 @@
-# Task 01 — Design spec (v1)
+# Task 01 — Design spec
 
 ## Goal
-Write a concrete v1 design spec for the macFUSE protective filesystem + wrapper.
+Write a concrete initial design spec for the macFUSE protective filesystem + wrapper.
 
 ## Requirements (from Martin)
 - Mount over existing OpenClaw dir: mountpoint `~/.openclaw`
@@ -29,7 +29,7 @@ Write a concrete v1 design spec for the macFUSE protective filesystem + wrapper.
   - OWASP-aligned notes
 
 ## Deliverable
-- `docs/design-v1.md` with:
+- `docs/design.md` with:
   - threat model + non-goals
   - directory layout
   - policy rules
