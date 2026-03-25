@@ -49,7 +49,9 @@ class MacOSSecurityCliKeychain {
 
   _ensureDarwin() {
     const p = typeof this._platform === 'function' ? this._platform() : this._platform;
-    if (p !== 'darwin') throw new Error('macOS Keychain backend requires darwin');
+    if (p !== 'darwin') {
+      throw new Error(`macOS Keychain backend requires macOS (process.platform=${p})`);
+    }
   }
 
   async getGenericPassword({ service, account }) {
