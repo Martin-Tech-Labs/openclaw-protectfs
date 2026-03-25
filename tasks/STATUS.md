@@ -2,6 +2,7 @@
 
 ## V1
 - **V1: COMPLETE** (baseline implementation + tests + operator docs).
+- Bookkeeping: this repo heartbeat/loop cron can be disabled unless you want post-V1 verification work (see below).
 
 ## Post-PLAN 19 verification (confidence pass)
 Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
