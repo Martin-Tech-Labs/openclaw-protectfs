@@ -5,7 +5,7 @@ const net = require('node:net');
 const crypto = require('node:crypto');
 
 const { migrateLegacyOpenclaw } = require('./migrate');
-const { MacOSSecurityCliKeychain, getOrCreateKey32 } = require('./keychain');
+const { resolveKek, writeKekToPipe } = require('./kek');
 
 const EXIT = {
   OK: 0,
@@ -261,29 +261,21 @@ async function run(cfg) {
   // PLAN 19: KEK comes from Keychain and is passed to FUSE via an anonymous pipe
   // (FD), not via environment variables.
   let kek;
-  if (process.platform !== 'darwin' || process.env.CI === 'true') {
-    // Keep CI deterministic and non-interactive.
-    // - Linux CI isn't the production target.
-    // - GitHub-hosted macOS runners generally cannot access an interactive user Keychain.
-    // Production target is macOS (non-CI), where we use Keychain.
-    kek = crypto.randomBytes(32);
-    log('kek: CI/non-darwin platform; using ephemeral random KEK (tests/CI only)');
-  } else {
-    try {
-      const keychain = new MacOSSecurityCliKeychain();
-      kek = await getOrCreateKey32({
-        keychain,
-        service: 'ocprotectfs',
-        account: 'kek',
-        createRandomKey32: () => crypto.randomBytes(32),
-      });
-      log('kek: loaded from Keychain (service=ocprotectfs, account=kek)');
-    } catch (e) {
-      log(`kek: keychain failed: ${e.message}`);
-      await liveness.close();
-      return EXIT.CONFIG;
-    }
+  try {
+    const resolved = await resolveKek({
+      platform: process.platform,
+      env: process.env,
+      randomBytes: crypto.randomBytes,
+    });
+    kek = resolved.kek;
+    if (resolved.source === 'keychain') log('kek: loaded from Keychain (service=ocprotectfs, account=kek)');
+    else log('kek: CI/non-darwin platform; using ephemeral random KEK (tests/CI only)');
+  } catch (e) {
+    log(`kek: keychain failed: ${e.message}`);
+    await liveness.close();
+    return EXIT.CONFIG;
   }
+
 
   const childEnv = buildChildEnv({
     OCPROTECTFS_LIVENESS_SOCK: liveness.path,
@@ -313,18 +305,7 @@ async function run(cfg) {
   // flows), the pipe can emit async errors (EPIPE/ECONNRESET). Those must not
   // crash the wrapper or tests.
   try {
-    const kekStream = fuse.stdio[3];
-    if (!kekStream || typeof kekStream.write !== 'function') throw new Error('missing KEK pipe stream');
-
-    // Swallow pipe errors that can occur during teardown.
-    kekStream.on('error', (err) => {
-      log(`kek: pipe error (ignored): ${err && err.code ? err.code : err.message}`);
-    });
-
-    await new Promise((resolve, reject) => {
-      kekStream.write(kek, (e) => (e ? reject(e) : resolve()));
-    });
-    await new Promise((resolve) => kekStream.end(resolve));
+    await writeKekToPipe({ kek, stream: fuse.stdio[3], log });
   } catch (e) {
     log(`kek: failed to write to fuse fd pipe: ${e.message}`);
     try {
