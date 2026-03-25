@@ -107,6 +107,14 @@ npm install
 npm test
 ```
 
+To run **real macFUSE mount** tests locally (opt-in):
+
+```bash
+OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 npm test
+```
+
+(See `docs/local-macfuse.md` for prerequisites/troubleshooting.)
+
 ## Running (operator)
 ### First run / migration
 On first mount, existing `~/.openclaw` contents are migrated into `~/.openclaw.real` (atomic rename) and a marker is written.
