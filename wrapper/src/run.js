@@ -261,11 +261,13 @@ async function run(cfg) {
   // PLAN 19: KEK comes from Keychain and is passed to FUSE via an anonymous pipe
   // (FD), not via environment variables.
   let kek;
-  if (process.platform !== 'darwin') {
-    // CI runs on Linux; keep wrapper tests green by using an ephemeral KEK.
-    // Production target is macOS, where we use Keychain.
+  if (process.platform !== 'darwin' || process.env.CI === 'true') {
+    // Keep CI deterministic and non-interactive.
+    // - Linux CI isn't the production target.
+    // - GitHub-hosted macOS runners generally cannot access an interactive user Keychain.
+    // Production target is macOS (non-CI), where we use Keychain.
     kek = crypto.randomBytes(32);
-    log('kek: non-darwin platform; using ephemeral random KEK (tests/CI only)');
+    log('kek: CI/non-darwin platform; using ephemeral random KEK (tests/CI only)');
   } else {
     try {
       const keychain = new MacOSSecurityCliKeychain();
