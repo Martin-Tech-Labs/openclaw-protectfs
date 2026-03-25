@@ -1,4 +1,4 @@
-const { execFileSync } = require('node:child_process');
+const childProcess = require('node:child_process');
 const os = require('node:os');
 
 // Minimal Keychain abstraction for v1.
@@ -9,6 +9,12 @@ const os = require('node:os');
 // NOTE: Task 04 focuses on crypto scheme + formats; wrapper integration (user
 // presence prompts, ACL pinning, socket handoff to FUSE) can be implemented in
 // later tasks. This module exists so the project has a clear API surface.
+
+/**
+ * @typedef {Object} IKeychain
+ * @property {(args: {service: string, account: string}) => Promise<Buffer|null>} getGenericPassword
+ * @property {(args: {service: string, account: string, secret: Buffer}) => Promise<void>} setGenericPassword
+ */
 
 class InMemoryKeychain {
   constructor() {
@@ -35,10 +41,15 @@ class InMemoryKeychain {
 class MacOSSecurityCliKeychain {
   constructor(opts = {}) {
     this.securityBin = opts.securityBin || '/usr/bin/security';
+
+    // Dependency injection for tests.
+    this._execFileSync = opts.execFileSync || childProcess.execFileSync;
+    this._platform = opts.platform || os.platform;
   }
 
   _ensureDarwin() {
-    if (os.platform() !== 'darwin') throw new Error('macOS Keychain backend requires darwin');
+    const p = typeof this._platform === 'function' ? this._platform() : this._platform;
+    if (p !== 'darwin') throw new Error('macOS Keychain backend requires darwin');
   }
 
   async getGenericPassword({ service, account }) {
@@ -46,9 +57,13 @@ class MacOSSecurityCliKeychain {
 
     try {
       // -w prints password only.
-      const out = execFileSync(this.securityBin, ['find-generic-password', '-s', service, '-a', account, '-w'], {
-        stdio: ['ignore', 'pipe', 'ignore'],
-      });
+      const out = this._execFileSync(
+        this.securityBin,
+        ['find-generic-password', '-s', service, '-a', account, '-w'],
+        {
+          stdio: ['ignore', 'pipe', 'ignore'],
+        },
+      );
 
       // Store arbitrary bytes as base64 text in Keychain.
       const s = out.toString('utf8').trim();
@@ -68,7 +83,7 @@ class MacOSSecurityCliKeychain {
     // -U updates if exists.
     // Write as base64 text so we can round-trip arbitrary bytes.
     const encoded = secret.toString('base64');
-    execFileSync(
+    this._execFileSync(
       this.securityBin,
       ['add-generic-password', '-U', '-s', service, '-a', account, '-w', encoded],
       { stdio: ['ignore', 'ignore', 'ignore'] },
