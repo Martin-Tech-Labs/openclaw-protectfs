@@ -50,6 +50,7 @@ test('kek: resolveKek uses keychain on darwin non-CI via DI factory', async () =
   const out = await resolveKek({
     platform: 'darwin',
     env: { CI: 'false' },
+    isInteractive: true,
     randomBytes: () => fixedKey32(0x33),
     keychainFactory: () => fakeKeychain,
     service: 'ocprotectfs',
@@ -74,6 +75,7 @@ test('kek: resolveKek prefers explicit keychain + allows injecting getOrCreateKe
   const out = await resolveKek({
     platform: 'darwin',
     env: { CI: 'false' },
+    isInteractive: true,
     randomBytes: () => fixedKey32(0x55),
     keychain: fakeKeychain,
     keychainFactory: () => {
