@@ -1,0 +1,18 @@
+name: pr-guard
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  issue-closure-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout
+      - name: Check closure keywords vs partial/scaffold
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf "%s" "$PR_TITLE" > /tmp/pr_title.txt
+          printf "%s" "$PR_BODY" > /tmp/pr_body.txt
+          ./.github/scripts/guard_issue_closures.sh /tmp/pr_body.txt /tmp/pr_title.txt
