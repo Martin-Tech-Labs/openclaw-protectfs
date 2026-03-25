@@ -22,16 +22,27 @@ cd openclaw-protectfs
 npm install
 ```
 
-3) Start the wrapper (mounts FUSE at `~/.openclaw`, then spawns the OpenClaw gateway):
+3) Start the wrapper.
+
+The wrapper **supervises two long-running processes**:
+- the FUSE daemon (this repo): `fusefs/ocprotectfs-fuse.js`
+- your OpenClaw gateway process (must stay running; wrapper will shut down the mount if it exits)
+
+If you just want to validate the mount + encryption behavior **without** starting OpenClaw yet, you can use a dummy gateway (`/bin/sleep`) for a smoke test:
 
 ```bash
-# KEK (Key Encryption Key) will be retrieved/created in macOS Keychain
-#   service=ocprotectfs, account=kek
-# and passed to the FUSE daemon in-memory via a pipe (no env secret).
-node wrapper/ocprotectfs.js --help
-
-# then run the real invocation (see "Start wrapper" below)
+node wrapper/ocprotectfs.js \
+  --require-fuse-ready \
+  --fuse-bin node \
+  --fuse-arg fusefs/ocprotectfs-fuse.js \
+  --gateway-bin /bin/sleep \
+  --gateway-arg 1000000
 ```
+
+Notes:
+- The KEK (Key Encryption Key) is retrieved/created in macOS Keychain (`service=ocprotectfs`, `account=kek`).
+- The wrapper passes the KEK to the FUSE daemon **in-memory via an anonymous pipe** (no env secret).
+- For a real deployment, replace the dummy gateway with the command that runs your OpenClaw gateway in the foreground.
 
 Optional (recommended for ops clarity): **pre-create / reset the KEK in Keychain**.
 
@@ -289,21 +300,27 @@ Legacy/testing-only:
 - `OCPROTECTFS_KEK_B64`: base64-encoded 32-byte KEK (do not use for production runs)
 
 ### Start wrapper (spawns FUSE + gateway)
+
 Wrapper entrypoint:
 
 ```bash
 node wrapper/ocprotectfs.js --help
 ```
 
-Example (best-effort) invocation:
+Smoke-test invocation (mount + encrypt/decrypt behavior, with a dummy gateway that just keeps the wrapper alive):
 
 ```bash
-# Use the repo's fuse daemon + the existing OpenClaw gateway node entry.
-# (Wrapper sets OCPROTECTFS_LIVENESS_SOCK automatically for children.)
-
-# KEK will be retrieved/created in Keychain and passed to FUSE via FD (no env secret).
-node wrapper/ocprotectfs.js   --require-fuse-ready   --fuse-bin "$(command -v node)"   --fuse-arg "$(pwd)/fusefs/ocprotectfs-fuse.js"   --gateway-bin "$(command -v node)"   --gateway-arg "/Users/agent/openclaw/node_modules/openclaw/dist/index.js"   --gateway-arg gateway   --gateway-arg --port   --gateway-arg 18789
+node wrapper/ocprotectfs.js \
+  --require-fuse-ready \
+  --fuse-bin "$(command -v node)" \
+  --fuse-arg "$(pwd)/fusefs/ocprotectfs-fuse.js" \
+  --gateway-bin /bin/sleep \
+  --gateway-arg 1000000
 ```
+
+Real deployment:
+- Use the same `--fuse-*` flags as above.
+- Replace `--gateway-bin/--gateway-arg` with the command that runs your OpenClaw gateway **in the foreground** (the wrapper supervises it; if it exits, the wrapper will unmount and fail closed).
 
 ## Safety / rollback
 
