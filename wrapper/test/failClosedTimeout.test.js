@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-const { run, EXIT } = require('../lib/run');
+const { run, EXIT } = require('../src/run');
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));

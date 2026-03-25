@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { OPS, authorizeOp } = require('../lib/core-v1');
+const { OPS, authorizeOp } = require('../src/core-v1');
 
 // Task 09 — “acceptance” tests for FUSE core policy outcomes.
 //

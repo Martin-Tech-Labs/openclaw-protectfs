@@ -2,7 +2,7 @@
 
 const path = require('node:path');
 const os = require('node:os');
-const { run } = require('./lib/run');
+const { run } = require('./src/run');
 
 function defaultBackstore() {
   return path.join(os.homedir(), '.openclaw.real');

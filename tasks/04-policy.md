@@ -20,7 +20,7 @@ This task deliberately focuses on *pure logic* (no macFUSE bindings) so it is te
 - Plaintext paths currently do **not** require gateway checks (by design), because they are intended for collaborative/dev content and would otherwise break common tooling.
 
 ## Deliverables
-- `fusefs/lib/policy-v1.js` with:
+- `fusefs/src/policy-v1.js` with:
   - `assertSafeRelative(rel)`
   - `isPlaintextPath(rel)`
   - `classifyPath(rel)`

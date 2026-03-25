@@ -20,7 +20,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 
-const { makeFuseOps } = require('./lib/fuse-ops-v1');
+const { makeFuseOps } = require('./src/fuse-ops-v1');
 
 function defaultBackstore() {
   return path.join(os.homedir(), '.openclaw.real');

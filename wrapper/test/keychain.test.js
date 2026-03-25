@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { InMemoryKeychain, getOrCreateKey32 } = require('../lib/keychain');
+const { InMemoryKeychain, getOrCreateKey32 } = require('../src/keychain');
 
 function fixedKey32(byte) {
   return Buffer.alloc(32, byte);

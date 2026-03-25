@@ -6,9 +6,9 @@ const {
   encodeEncryptedFileV1,
   decodeEncryptedFileV1,
   V1: FILE_V1,
-} = require('../lib/crypto-v1');
+} = require('../src/crypto-v1');
 
-const { newDek, encodeWrappedDekV1, decodeWrappedDekV1, V1: DEK_V1 } = require('../lib/dek-store-v1');
+const { newDek, encodeWrappedDekV1, decodeWrappedDekV1, V1: DEK_V1 } = require('../src/dek-store-v1');
 
 test('crypto-v1: encrypt/decrypt roundtrip', () => {
   const dek = randomKey32();
