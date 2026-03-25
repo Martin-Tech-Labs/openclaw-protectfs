@@ -42,7 +42,17 @@ async function resolveKek(args = {}) {
   // Keep CI deterministic and non-interactive.
   // - Linux CI isn't the production target.
   // - GitHub-hosted macOS runners generally cannot access an interactive user Keychain.
-  if (platform !== 'darwin' || env.CI === 'true') {
+  const ci = env.CI;
+  const isCi = ci && ci !== 'false' && ci !== '0';
+
+  // Default to a non-interactive-safe behavior: if we are not in a TTY session,
+  // avoid Keychain so automated runs (tests/cron) cannot hang on user prompts.
+  const isInteractive =
+    typeof args.isInteractive === 'boolean'
+      ? args.isInteractive
+      : Boolean(process.stdin && process.stdin.isTTY && process.stdout && process.stdout.isTTY);
+
+  if (platform !== 'darwin' || isCi || !isInteractive) {
     return { kek: randomBytes(32), source: 'ephemeral' };
   }
 

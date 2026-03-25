@@ -476,8 +476,26 @@ async function bestEffortUnmount(mountpoint) {
       log(`unmount cmd: ${bin} ${args.join(' ')}`);
       const res = await new Promise((resolve) => {
         const p = spawn(bin, args, { stdio: 'ignore' });
-        p.once('error', () => resolve({ ok: false, reason: 'spawn-error' }));
-        p.once('exit', (code) => resolve({ ok: code === 0, code: Number.isFinite(code) ? code : null }));
+
+        // Hardening: never allow unmount helpers to hang the supervisor/tests.
+        const timeoutMs = 750;
+        const timer = setTimeout(() => {
+          try {
+            p.kill('SIGKILL');
+          } catch (_) {
+            // ignore
+          }
+          resolve({ ok: false, reason: 'timeout' });
+        }, timeoutMs);
+
+        p.once('error', () => {
+          clearTimeout(timer);
+          resolve({ ok: false, reason: 'spawn-error' });
+        });
+        p.once('exit', (code) => {
+          clearTimeout(timer);
+          resolve({ ok: code === 0, code: Number.isFinite(code) ? code : null });
+        });
       });
 
       if (res.ok) return;
