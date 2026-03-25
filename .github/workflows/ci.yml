@@ -38,3 +38,12 @@ jobs:
         env:
           OCPROTECTFS_RUN_REAL_MOUNT_TESTS: "0"
         run: make test
+
+  # Branch protection expects a status check called exactly "basic".
+  # Use a tiny gate job that depends on the full test matrix.
+  basic:
+    name: basic
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - run: echo "basic gate OK"
