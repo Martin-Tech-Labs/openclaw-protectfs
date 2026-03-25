@@ -19,13 +19,15 @@ test('policy: assertSafeRelative rejects absolute and backslash paths', () => {
   assert.throws(() => assertSafeRelative('a\\b'), /backslash/i);
 });
 
-test('policy: default plaintext passthrough prefixes match legacy behavior', () => {
-  assert.deepEqual(DEFAULT_PLAINTEXT_PREFIXES, ['workspace', 'workspace-joao']);
+test('policy: default plaintext passthrough prefixes are minimal', () => {
+  assert.deepEqual(DEFAULT_PLAINTEXT_PREFIXES, ['workspace']);
 
   assert.equal(isPlaintextPath('workspace/file.txt'), true);
-  assert.equal(isPlaintextPath('workspace-joao/note.md'), true);
   assert.equal(isPlaintextPath('workspace'), true);
-  assert.equal(isPlaintextPath('workspace-joao'), true);
+
+  // No implicit second workspace; add it explicitly via opts/env if desired.
+  assert.equal(isPlaintextPath('workspace-joao/note.md'), false);
+  assert.equal(isPlaintextPath('workspace-joao'), false);
 
   assert.equal(isPlaintextPath('workspacex/file.txt'), false);
   assert.equal(isPlaintextPath('secrets/key'), false);

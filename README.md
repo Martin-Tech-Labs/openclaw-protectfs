@@ -146,10 +146,9 @@ In this project, macFUSE routes file operations on `~/.openclaw` into our FUSE d
 
 ## Policy
 - Plaintext passthrough (configurable): selected *top-level prefixes* under the mount.
-  - Default passthrough prefixes (legacy behavior):
+  - Default passthrough prefixes:
     - `~/.openclaw/workspace/**`
-    - `~/.openclaw/workspace-joao/**`
-  - Configure passthrough prefixes:
+  - Configure passthrough prefixes (examples):
     - FUSE flags (repeatable): `ocprotectfs-fuse --plaintext-prefix workspace --plaintext-prefix workspace-joao`
     - Or env var (comma-separated): `OCPROTECTFS_PLAINTEXT_PREFIXES=workspace,workspace-joao`
 

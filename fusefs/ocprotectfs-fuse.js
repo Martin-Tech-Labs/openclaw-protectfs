@@ -7,7 +7,7 @@
 // - remain alive until terminated, and attempt a clean unmount on SIGINT/SIGTERM
 //
 // initial policy summary:
-// - workspace/** + workspace-joao/** => plaintext passthrough
+// - workspace/** => plaintext passthrough (additional prefixes can be configured)
 // - everything else => encrypted-at-rest, and requires gateway access checks
 //
 // IMPORTANT SECURITY DEFAULTS:

@@ -6,14 +6,14 @@ const path = require('node:path');
 // It is intentionally independent of macFUSE bindings so it can be unit tested.
 //
 // Policy (from tasks/01-design.md):
-// - Plaintext passthrough for selected top-level prefixes (default: workspace/** and workspace-joao/**)
+// - Plaintext passthrough for selected top-level prefixes (default: workspace/**)
 // - Encrypt-at-rest for everything else
 //
 // Notes:
 // - FUSE paths are expected to be POSIX-like relative paths (no leading slash).
 // - We defensively reject suspicious relative paths (`..`, backslashes, NUL).
 
-const DEFAULT_PLAINTEXT_PREFIXES = Object.freeze(['workspace', 'workspace-joao']);
+const DEFAULT_PLAINTEXT_PREFIXES = Object.freeze(['workspace']);
 
 function assertSafeRelative(rel) {
   if (typeof rel !== 'string') throw new Error('rel must be a string');
