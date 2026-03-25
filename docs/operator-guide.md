@@ -48,8 +48,8 @@ KEK handling (PLAN 19):
 - Existing `~/.openclaw` contents are migrated into `~/.openclaw.real`.
 - A marker file prevents repeated migration.
 
-### Start wrapper
-Run the wrapper which mounts FUSE and starts the gateway.
+### Start supervisor
+Run the supervisor (wrapper entrypoint) which mounts FUSE and starts the gateway.
 
 ## Secrets and what is encrypted
 ### Encrypted at rest
@@ -80,7 +80,7 @@ For convenience, the diagrams are also embedded below.
 ```mermaid
 flowchart TB
   subgraph UserSpace[User space: agent]
-    W[wrapper (ocprotectfs-wrapper)]
+    W[supervisor (ocprotectfs-supervisor)]
     F[FUSE daemon (ocprotectfs-fuse)]
     G[openclaw-gateway]
   end

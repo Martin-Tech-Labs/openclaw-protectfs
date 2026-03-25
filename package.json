@@ -2,7 +2,7 @@
   "bin": {
     "ocprotectfs": "wrapper/ocprotectfs.js"
   },
-  "description": "macFUSE-based protective filesystem wrapper skeleton for OpenClaw",
+  "description": "macFUSE-based protective filesystem supervisor skeleton for OpenClaw",
   "license": "MIT",
   "name": "openclaw-protectfs",
   "optionalDependencies": {

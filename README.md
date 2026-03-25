@@ -10,7 +10,7 @@ macFUSE-based protective filesystem overlay for OpenClaw on macOS.
 
 ### Operator quick start (mount + run gateway)
 
-Goal: mount a protective overlay at `~/.openclaw`, migrate your existing data to `~/.openclaw.real` on first run, and start the OpenClaw gateway via the wrapper.
+Goal: mount a protective overlay at `~/.openclaw`, migrate your existing data to `~/.openclaw.real` on first run, and start the OpenClaw gateway via the supervisor.
 
 1) Install and enable **macFUSE** (required on macOS).
 
@@ -22,9 +22,9 @@ cd openclaw-protectfs
 npm install
 ```
 
-3) Start the wrapper.
+3) Start the supervisor.
 
-The wrapper **supervises two long-running processes**:
+The supervisor **supervises two long-running processes**:
 - the FUSE daemon (this repo): `fusefs/ocprotectfs-fuse.js`
 - your OpenClaw gateway process (must stay running; wrapper will shut down the mount if it exits)
 
@@ -46,7 +46,7 @@ Notes:
 
 Optional (advanced): **reset the KEK in Keychain**.
 
-By default, the wrapper will **create and manage** the KEK Keychain item automatically on first run.
+By default, the supervisor will **create and manage** the KEK Keychain item automatically on first run.
 On macOS, it uses native Keychain APIs (via a small Swift helper) and configures the item to require **interactive user presence** (Touch ID / password) when accessed.
 
 If you need to rotate/reset the KEK (this will make existing encrypted data unreadable unless you also rotate/re-encrypt DEKs), you can delete the item:
@@ -73,7 +73,7 @@ cat ~/.openclaw/_ocpfs_smoketest_secret.txt
 grep -R "secret" ~/.openclaw.real || echo "OK: not found in backstore"
 ```
 
-5) Rollback (if anything looks wrong): stop the wrapper (Ctrl-C) and see **Safety / rollback** below.
+5) Rollback (if anything looks wrong): stop the supervisor (Ctrl-C) and see **Safety / rollback** below.
 
 ### Developer quick start (tests)
 
@@ -102,7 +102,7 @@ This project provides a **path-compatible** mount over `~/.openclaw` that:
 - enforces a **fail-closed** access policy for sensitive paths
 
 ## Components
-- **Wrapper (`ocprotectfs-wrapper`)**
+- **Supervisor (`ocprotectfs-supervisor`)**
   - obtains the Key Encryption Key (KEK) from macOS Keychain (user presence)
   - mounts the FUSE filesystem at `~/.openclaw`
   - starts OpenClaw gateway as a child process
@@ -147,7 +147,7 @@ In this project, macFUSE routes file operations on `~/.openclaw` into our FUSE d
 ```mermaid
 flowchart TB
   subgraph UserSpace[User space: agent]
-    W[wrapper — ocprotectfs-wrapper]
+    W[supervisor — ocprotectfs-supervisor]
     F[FUSE daemon — ocprotectfs-fuse]
     G[OpenClaw gateway]
   end
@@ -230,8 +230,8 @@ To avoid that, the wrapper performs a one-time migration step **before mounting*
 
 If you ever need to inspect what got moved, look in the `.legacy-openclaw/` directory in the backstore.
 
-### Start wrapper
-Run the wrapper which mounts FUSE and starts the gateway.
+### Start supervisor
+Run the supervisor (wrapper entrypoint) which mounts FUSE and starts the gateway.
 
 (Exact command names/flags are in-repo; this README is the single operator entrypoint.)
 
@@ -314,7 +314,7 @@ KEK handling (recommended):
 Legacy/testing-only:
 - `OCPROTECTFS_KEK_B64`: base64-encoded 32-byte KEK (do not use for production runs)
 
-### Start wrapper (spawns FUSE + gateway)
+### Start supervisor (spawns FUSE + gateway)
 
 Wrapper entrypoint:
 

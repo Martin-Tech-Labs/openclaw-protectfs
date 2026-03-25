@@ -1,10 +1,10 @@
-# Wrapper lifecycle (ocprotectfs)
+# Supervisor lifecycle (ocprotectfs)
 
-This document describes the *current* wrapper lifecycle contract.
+This document describes the *current* supervisor lifecycle contract.
 
 ## Roles
 
-- **Wrapper (`wrapper/ocprotectfs.js`)**
+- **Supervisor (`wrapper/ocprotectfs.js`)**
   - Validates config, prepares directories
   - Performs legacy migration out of the mountpoint (Task 06)
   - Creates a liveness unix socket inside the mountpoint (Task 05)
@@ -22,18 +22,18 @@ This document describes the *current* wrapper lifecycle contract.
 
 ## Startup sequence
 
-1. Wrapper validates paths and enforces strict permissions on `--backstore` and `--mountpoint`.
-2. Wrapper migrates any pre-existing files *out of the mountpoint* to avoid data being hidden once the filesystem is mounted over it.
-3. Wrapper creates the liveness socket at:
+1. Supervisor validates paths and enforces strict permissions on `--backstore` and `--mountpoint`.
+2. Supervisor migrates any pre-existing files *out of the mountpoint* to avoid data being hidden once the filesystem is mounted over it.
+3. Supervisor creates the liveness socket at:
    - `${mountpoint}/.ocpfs.sock`
-4. Wrapper starts the FUSE process (detached process group) and waits for a `READY` line on stdout/stderr if `--require-fuse-ready` is enabled.
-5. Wrapper starts the gateway process (detached process group).
+4. Supervisor starts the FUSE process (detached process group) and waits for a `READY` line on stdout/stderr if `--require-fuse-ready` is enabled.
+5. Supervisor starts the gateway process (detached process group).
 
 ## Readiness / fail-closed
 
 When `--require-fuse-ready` is set:
 
-- If the wrapper does not observe `READY` within `--fuse-ready-timeout-ms`, it will:
+- If the supervisor does not observe `READY` within `--fuse-ready-timeout-ms`, it will:
   - terminate the FUSE process group
   - remove the liveness socket
   - exit with a stable, non-zero error code (`EXIT.FUSE_NOT_READY`)
@@ -42,7 +42,7 @@ This is the core "fail closed" behavior: don’t start gateway unless FUSE is kn
 
 ## Shutdown sequence
 
-The wrapper handles **SIGINT** and **SIGTERM**.
+The supervisor handles **SIGINT** and **SIGTERM**.
 
 On shutdown, it:
 
@@ -52,11 +52,11 @@ On shutdown, it:
 4. Escalates to SIGKILL if necessary
 5. Removes the liveness socket
 
-If shutdown times out, wrapper exits with `EXIT.SHUTDOWN`.
+If shutdown times out, supervisor exits with `EXIT.SHUTDOWN`.
 
 ## Unmount behavior (important)
 
-On shutdown the wrapper performs a **best-effort unmount** of the mountpoint.
+On shutdown the supervisor performs a **best-effort unmount** of the mountpoint.
 
 - First it terminates the gateway + FUSE process groups (SIGTERM → SIGKILL escalation).
 - Then it invokes an unmount command (platform-dependent) and **ignores failures**.
@@ -67,8 +67,8 @@ Rationale: the FUSE daemon should normally unmount itself on SIGTERM/SIGINT, but
 
 ## Known limitations / TODOs
 
-- Unmount is best-effort only: the wrapper does not currently verify that the mount is actually gone (it avoids parsing `mount` output across platforms).
-- Wrapper currently expects FUSE readiness to be signaled by a `READY` line; if this contract changes, `--require-fuse-ready` will need updates.
+- Unmount is best-effort only: the supervisor does not currently verify that the mount is actually gone (it avoids parsing `mount` output across platforms).
+- Supervisor currently expects FUSE readiness to be signaled by a `READY` line; if this contract changes, `--require-fuse-ready` will need updates.
 
 ## Tests
 
