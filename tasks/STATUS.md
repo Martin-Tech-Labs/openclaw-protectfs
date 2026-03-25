@@ -1,15 +1,19 @@
 # STATUS
 
 ## Current (PLAN)
-- Plan task: **PLAN 19-keychain-kek-e2e**
-- Focus: make Keychain the real operator path for KEK (user presence) and pass KEK to FUSE without env.
-- Status: PR open for review: #49 (branch: `plan/19-keychain-kek-e2e`).
+- Current focus: **Post-PLAN 19 verification**
+  - Re-run/verify the real-mount tests with the Keychain/FD KEK path on macOS.
+  - Update README/operator docs with any final operator notes from the real-mount verification.
+
+## Recently completed
+- **PLAN 19-keychain-kek-e2e** — merged as PR **#49** (Keychain KEK + FD handoff; no env secret).
 
 ## Baseline v1 complete
 The baseline v1 (env-based bring-up, encrypted-at-rest, policy enforcement, real mount tests, README) is complete.
 
 ## Next
-- After PLAN 19: re-verify real-mount tests with Keychain path and update README.
+- If the real-mount verification finds gaps: fix and add tests/docs.
+- If everything is solid: consider declaring **V1 COMPLETE** and do final bookkeeping (STATUS/README).
 
 ## Definition of Done (per PR)
 For non-trivial PRs:
