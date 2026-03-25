@@ -18,9 +18,9 @@ text="$title
 $body"
 
 # If a PR is marked partial/scaffold/WIP, it must not contain closing keywords.
-if echo "$text" | grep -Eiq 'PARTIAL:|Scaffold: true|Partial: true|WIP: true'; then
+if echo "$text" | grep -Eiq 'PARTIAL:|Scaffold: true|Partial: true|WIP: true|plan/contract|plan step|docs only|design only'; then
   if echo "$text" | grep -Eiq '\b(closes|fixes|resolves)\s*#\d+\b'; then
-    echo "ERROR: PR contains closing keywords (Closes/Fixes/Resolves #n) but is marked partial/scaffold/WIP." >&2
+    echo "ERROR: PR contains closing keywords (Closes/Fixes/Resolves #n) but indicates it is not a full issue completion (partial/scaffold/WIP/plan/docs-only)." >&2
     echo "Use Refs/Part of/Relates to instead, or remove partial/scaffold wording if the issue is fully complete." >&2
     exit 2
   fi
