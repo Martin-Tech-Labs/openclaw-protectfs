@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { OPS, authorizeOp } = require('../src/core-v1');
+const { OPS, authorizeOp } = require('../src/core');
 
 // Task 09 — “acceptance” tests for FUSE core policy outcomes.
 //
@@ -22,14 +22,14 @@ const WRITE_OPS = [
 
 const READ_OPS = [OPS.READ];
 
-test('core-v1: plaintext workspace operations are allowed without gateway checks', () => {
+test('core: plaintext workspace operations are allowed without gateway checks', () => {
   for (const op of [...READ_OPS, ...WRITE_OPS]) {
     const res = authorizeOp({ op, rel: 'workspace/notes.txt', gatewayAccessAllowed: false });
     assert.equal(res.ok, true, `expected allow for op=${op}`);
   }
 });
 
-test('core-v1: encrypted paths fail closed when gateway checks are missing', () => {
+test('core: encrypted paths fail closed when gateway checks are missing', () => {
   for (const op of [...READ_OPS, ...WRITE_OPS]) {
     const res = authorizeOp({ op, rel: 'secrets/db.sqlite', gatewayAccessAllowed: false });
     assert.equal(res.ok, false, `expected deny for op=${op}`);
@@ -37,19 +37,19 @@ test('core-v1: encrypted paths fail closed when gateway checks are missing', () 
   }
 });
 
-test('core-v1: encrypted paths are allowed when gateway checks pass', () => {
+test('core: encrypted paths are allowed when gateway checks pass', () => {
   for (const op of [...READ_OPS, ...WRITE_OPS]) {
     const res = authorizeOp({ op, rel: 'secrets/db.sqlite', gatewayAccessAllowed: true });
     assert.equal(res.ok, true, `expected allow for op=${op}`);
   }
 });
 
-test('core-v1: denies unknown ops', () => {
+test('core: denies unknown ops', () => {
   const res = authorizeOp({ op: 'frobnicate', rel: 'workspace/x', gatewayAccessAllowed: false });
   assert.deepEqual(res, { ok: false, code: 'EINVAL', reason: 'unknown op: frobnicate' });
 });
 
-test('core-v1: rejects unsafe relative paths (fail closed)', () => {
+test('core: rejects unsafe relative paths (fail closed)', () => {
   assert.throws(() => authorizeOp({ op: OPS.READ, rel: '../etc/passwd', gatewayAccessAllowed: true }), {
     message: /path traversal not allowed/,
   });

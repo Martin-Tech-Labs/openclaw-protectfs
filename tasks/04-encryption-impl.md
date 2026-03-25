@@ -18,7 +18,7 @@ Implement at-rest encryption for the backstore and key management sufficient to 
 - [x] `make test` passes locally.
 
 ## Implementation notes
-- v1 uses **AES-256-GCM** (Node built-in `crypto`) rather than XChaCha20-Poly1305 to avoid extra native deps.
+- initial uses **AES-256-GCM** (Node built-in `crypto`) rather than XChaCha20-Poly1305 to avoid extra native deps.
 - Introduced a small, versioned wrapped-DEK blob format (`OCDEK1`) to store DEK encrypted under KEK.
 - Encrypted file format (`OCFS1`) authenticates its header via AEAD AAD.
 

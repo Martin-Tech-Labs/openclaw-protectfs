@@ -212,7 +212,7 @@ test('ocprotectfs-fuse: best-effort real mount editor-style atomic save (workspa
     const tmpMount = path.join(workspaceDir, tmpName);
 
     // initial save
-    fs.writeFileSync(tmpMount, 'v1');
+    fs.writeFileSync(tmpMount, 'initial');
     fsyncFileSafe(tmpMount);
     fs.renameSync(tmpMount, finalMount);
     fsyncDirSafe(workspaceDir);

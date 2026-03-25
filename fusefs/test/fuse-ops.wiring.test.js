@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 
-const { makeFuseOps } = require('../src/fuse-ops-v1');
+const { makeFuseOps } = require('../src/fuse-ops');
 
 const FakeFuse = {
   EACCES: 13,
@@ -74,7 +74,7 @@ function pStatfs(ops, p) {
   });
 }
 
-test('fuse-ops-v1 wiring: plaintext workspace is passthrough without gateway', async () => {
+test('fuse-ops wiring: plaintext workspace is passthrough without gateway', async () => {
   const backstore = tmpDir();
 
   const { ops } = makeFuseOps({
@@ -104,7 +104,7 @@ test('fuse-ops-v1 wiring: plaintext workspace is passthrough without gateway', a
   assert.equal(onDisk, 'hello');
 });
 
-test('fuse-ops-v1 wiring: encrypted paths fail closed without gateway', async () => {
+test('fuse-ops wiring: encrypted paths fail closed without gateway', async () => {
   const backstore = tmpDir();
 
   const { ops } = makeFuseOps({
@@ -118,7 +118,7 @@ test('fuse-ops-v1 wiring: encrypted paths fail closed without gateway', async ()
   assert.equal(out.code, -FakeFuse.EACCES);
 });
 
-test('fuse-ops-v1 wiring: encrypted paths require KEK even when gateway allowed', async () => {
+test('fuse-ops wiring: encrypted paths require KEK even when gateway allowed', async () => {
   const backstore = tmpDir();
 
   const { ops } = makeFuseOps({
@@ -132,7 +132,7 @@ test('fuse-ops-v1 wiring: encrypted paths require KEK even when gateway allowed'
   assert.equal(out.code, -FakeFuse.EACCES);
 });
 
-test('fuse-ops-v1 wiring: encrypted paths write ciphertext + DEK sidecar, and read returns plaintext', async () => {
+test('fuse-ops wiring: encrypted paths write ciphertext + DEK sidecar, and read returns plaintext', async () => {
   const backstore = tmpDir();
   const kek = Buffer.alloc(32, 7);
 
@@ -174,7 +174,7 @@ test('fuse-ops-v1 wiring: encrypted paths write ciphertext + DEK sidecar, and re
   assert.deepEqual(rd.entries.sort(), ['secret.txt']);
 });
 
-test('fuse-ops-v1 wiring: chmod/utimens/statfs are wired for plaintext workspace', async () => {
+test('fuse-ops wiring: chmod/utimens/statfs are wired for plaintext workspace', async () => {
   const backstore = tmpDir();
 
   const { ops } = makeFuseOps({

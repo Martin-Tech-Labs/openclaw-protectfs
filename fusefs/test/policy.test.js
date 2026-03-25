@@ -1,20 +1,25 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { assertSafeRelative, isPlaintextPath, classifyPath, DEFAULT_PLAINTEXT_PREFIXES } = require('../src/policy-v1');
+const {
+  assertSafeRelative,
+  isPlaintextPath,
+  classifyPath,
+  DEFAULT_PLAINTEXT_PREFIXES,
+} = require('../src/policy');
 
-test('policy-v1: assertSafeRelative normalizes and rejects traversal', () => {
+test('policy: assertSafeRelative normalizes and rejects traversal', () => {
   assert.equal(assertSafeRelative('a/b/../c'), 'a/c');
   assert.throws(() => assertSafeRelative('../a'), /traversal/i);
   assert.throws(() => assertSafeRelative('a/../../b'), /traversal/i);
 });
 
-test('policy-v1: assertSafeRelative rejects absolute and backslash paths', () => {
+test('policy: assertSafeRelative rejects absolute and backslash paths', () => {
   assert.throws(() => assertSafeRelative('/etc/passwd'), /absolute/i);
   assert.throws(() => assertSafeRelative('a\\b'), /backslash/i);
 });
 
-test('policy-v1: default plaintext passthrough prefixes match legacy behavior', () => {
+test('policy: default plaintext passthrough prefixes match legacy behavior', () => {
   assert.deepEqual(DEFAULT_PLAINTEXT_PREFIXES, ['workspace', 'workspace-joao']);
 
   assert.equal(isPlaintextPath('workspace/file.txt'), true);
@@ -26,7 +31,7 @@ test('policy-v1: default plaintext passthrough prefixes match legacy behavior', 
   assert.equal(isPlaintextPath('secrets/key'), false);
 });
 
-test('policy-v1: configurable plaintextPrefixes overrides defaults', () => {
+test('policy: configurable plaintextPrefixes overrides defaults', () => {
   assert.equal(isPlaintextPath('scratch/a.txt', { plaintextPrefixes: ['scratch'] }), true);
   assert.equal(isPlaintextPath('workspace/a.txt', { plaintextPrefixes: ['scratch'] }), false);
 
@@ -35,7 +40,7 @@ test('policy-v1: configurable plaintextPrefixes overrides defaults', () => {
   assert.equal(cls.requiresGatewayAccessChecks, false);
 });
 
-test('policy-v1: classifyPath marks non-passthrough paths as encrypted + access-checked', () => {
+test('policy: classifyPath marks non-passthrough paths as encrypted + access-checked', () => {
   const a = classifyPath('secrets/key');
   assert.equal(a.storage, 'encrypted');
   assert.equal(a.requiresGatewayAccessChecks, true);
@@ -45,7 +50,7 @@ test('policy-v1: classifyPath marks non-passthrough paths as encrypted + access-
   assert.equal(b.requiresGatewayAccessChecks, false);
 });
 
-test('policy-v1: env OCPROTECTFS_PLAINTEXT_PREFIXES is used when no explicit plaintextPrefixes provided', () => {
+test('policy: env OCPROTECTFS_PLAINTEXT_PREFIXES is used when no explicit plaintextPrefixes provided', () => {
   const prev = process.env.OCPROTECTFS_PLAINTEXT_PREFIXES;
   try {
     process.env.OCPROTECTFS_PLAINTEXT_PREFIXES = 'scratch, tmp';

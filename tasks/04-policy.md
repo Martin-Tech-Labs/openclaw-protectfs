@@ -1,14 +1,14 @@
 # Task 04 — Policy (path classification + access-control hooks)
 
 ## Goal
-Define and implement the v1 **path policy** for ProtectFS so the rest of the codebase can make consistent decisions about:
+Define and implement the initial **path policy** for ProtectFS so the rest of the codebase can make consistent decisions about:
 
 - which paths are stored plaintext vs encrypted-at-rest
 - which paths should be considered **sensitive** and therefore require gateway identity + liveness checks
 
 This task deliberately focuses on *pure logic* (no macFUSE bindings) so it is testable today.
 
-## Policy (v1)
+## Policy
 - Plaintext passthrough for:
   - `workspace/**`
   - `workspace-joao/**`
@@ -20,11 +20,11 @@ This task deliberately focuses on *pure logic* (no macFUSE bindings) so it is te
 - Plaintext paths currently do **not** require gateway checks (by design), because they are intended for collaborative/dev content and would otherwise break common tooling.
 
 ## Deliverables
-- `fusefs/src/policy-v1.js` with:
+- `fusefs/src/policy.js` with:
   - `assertSafeRelative(rel)`
   - `isPlaintextPath(rel)`
   - `classifyPath(rel)`
-- Unit tests in `fusefs/test/policy-v1.test.js`
+- Unit tests in `fusefs/test/policy.test.js`
 
 ## Acceptance criteria
 - [x] Plaintext passthrough classification matches design (`workspace/**`, `workspace-joao/**`).

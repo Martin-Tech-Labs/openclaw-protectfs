@@ -9,7 +9,7 @@ Create a minimal, testable wrapper CLI that:
 This task is **not** implementing the real FUSE filesystem or the full security model yet.
 
 ## Notes
-- The wrapper is the future “root of trust” (see `docs/design-v1.md`).
+- The wrapper is the future “root of trust” (see `docs/design.md`).
 - For Task 02 we accept a **placeholder FUSE process** (e.g. `sleep`) and a placeholder gateway command.
 - We must be careful about filesystem safety: no destructive behavior, refuse symlinks, require absolute paths.
 

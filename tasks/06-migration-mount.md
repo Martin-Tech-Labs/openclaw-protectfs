@@ -13,7 +13,7 @@ Users may already have data in `~/.openclaw` from previous installs. ProtectFS m
 - be idempotent (safe to run multiple times)
 - behave safely on partial migrations / interrupted runs
 
-## Scope (v1)
+## Scope
 - Add a **migration step** in wrapper startup (or a helper script invoked by wrapper) that:
   - detects whether `~/.openclaw` already contains “legacy” data
   - moves that legacy data into the backstore in a reversible way (or copies + verifies, then moves)
@@ -22,7 +22,7 @@ Users may already have data in `~/.openclaw` from previous installs. ProtectFS m
   - refusing to proceed if the mountpoint is not in an expected state
   - clear error messages + exit codes for common failure modes
 
-## Non-goals (v1)
+## Non-goals
 - Fully automatic rollback on every failure scenario (but do not destroy data; fail closed).
 - Supporting arbitrary mountpoint paths beyond the existing flags.
 
@@ -43,6 +43,6 @@ Users may already have data in `~/.openclaw` from previous installs. ProtectFS m
 - [x] `tasks/STATUS.md` updated with any known limitations.
 
 ## Notes / risks
-- macOS mount/unmount edge cases may require additional recovery logic; keep v1 behavior conservative.
+- macOS mount/unmount edge cases may require additional recovery logic; keep initial behavior conservative.
 - Be careful to avoid traversing symlinks during migration.
 - We treat a stale `.ocpfs.sock` in the mountpoint as safe wrapper noise; anything else triggers migration.

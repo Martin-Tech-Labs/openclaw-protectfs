@@ -1,9 +1,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { OPS, authorizeOp } = require('./core-v1');
-const { classifyPath } = require('./policy-v1');
-const { readEncryptedFile, writeEncryptedFile, sidecarDekPath } = require('./encrypted-file-v1');
+const { OPS, authorizeOp } = require('./core');
+const { classifyPath } = require('./policy');
+const { readEncryptedFile, writeEncryptedFile, sidecarDekPath } = require('./encrypted-file');
 
 function toRealPath(backstoreRoot, fusePath) {
   if (fusePath === '/') return backstoreRoot;

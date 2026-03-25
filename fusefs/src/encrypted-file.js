@@ -1,8 +1,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { encodeEncryptedFileV1, decodeEncryptedFileV1 } = require('./crypto-v1');
-const { newDek, encodeWrappedDekV1, decodeWrappedDekV1 } = require('./dek-store-v1');
+const { encodeEncryptedFileV1, decodeEncryptedFileV1 } = require('./crypto');
+const { newDek, encodeWrappedDekV1, decodeWrappedDekV1 } = require('./dek-store');
 
 function sidecarDekPath(realPath) {
   return `${realPath}.ocpfs.dek`;

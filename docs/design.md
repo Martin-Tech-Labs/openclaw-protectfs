@@ -1,4 +1,4 @@
-# Design v1 — OpenClaw protective filesystem (macFUSE)
+# Design initial — OpenClaw protective filesystem (macFUSE)
 
 ## Summary
 We provide a FUSE-mounted view at `~/.openclaw` backed by a real directory `~/.openclaw.real`.
@@ -18,10 +18,10 @@ A separate wrapper process is the root of trust:
 - Other arbitrary processes running as the same user (`agent`) should not be able to read sensitive OpenClaw data from disk (only ciphertext).
 - Even if they can read `~/.openclaw.real`, they must not obtain plaintext without passing FUSE policy.
 
-### Out-of-scope / non-goals (v1)
+### Out-of-scope / non-goals
 - Defending against root / kernel compromise.
 - Preventing exfiltration via the gateway itself (if gateway is compromised).
-- Perfect defense against PID reuse. Mitigation in v1: the wrapper owns the gateway lifetime; the FUSE daemon validates caller PID == recorded gateway PID AND re-hashes the resolved executable for that PID against the trusted SHA-256 on each sensitive access (with only a very short TTL cache).
+- Perfect defense against PID reuse. Mitigation in initial: the wrapper owns the gateway lifetime; the FUSE daemon validates caller PID == recorded gateway PID AND re-hashes the resolved executable for that PID against the trusted SHA-256 on each sensitive access (with only a very short TTL cache).
 
 ## Directory layout
 - Mountpoint: `/Users/agent/.openclaw` (FUSE)
@@ -68,14 +68,14 @@ For encrypted paths, allow read/write only if **all** checks pass:
 
 Otherwise return `EACCES`.
 
-Plaintext paths are allowed normally (v1) for the same user.
+Plaintext paths are allowed normally for the same user.
 
 ### Liveness check frequency
 To avoid TOCTOU overhead on every I/O, cache liveness result for a short TTL (e.g. 250ms) but never cache across failures.
 
 ## Crypto
 ### Algorithm
-- AEAD (v1): **AES-256-GCM** (12-byte nonce, 16-byte auth tag).
+- AEAD: **AES-256-GCM** (12-byte nonce, 16-byte auth tag).
   - Rationale: available in Node’s built-in `crypto` without extra deps.
 
 ### Key hierarchy (KEK/DEK)
@@ -115,7 +115,7 @@ Optional future fields: original size, compression flags.
 - Wrapper retrieves/creates KEK via Keychain (or a stubbed backend in tests).
 - Wrapper unwraps/creates DEK (stored on disk in wrapped form) and passes DEK to FUSE over a unix socket; FUSE never touches Keychain.
 
-## Required filesystem operations (v1)
+## Required filesystem operations
 Minimum set:
 - getattr
 - readdir

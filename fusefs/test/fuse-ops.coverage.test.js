@@ -4,8 +4,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 
-const { makeFuseOps } = require('../src/fuse-ops-v1');
-const { readEncryptedFile, writeEncryptedFile, sidecarDekPath } = require('../src/encrypted-file-v1');
+const { makeFuseOps } = require('../src/fuse-ops');
+const { readEncryptedFile, writeEncryptedFile, sidecarDekPath } = require('../src/encrypted-file');
 
 const FakeFuse = {
   EACCES: 13,
@@ -78,7 +78,7 @@ function pRmdir(ops, pth) {
 
 const KEK = Buffer.alloc(32, 7);
 
-test('fuse-ops-v1 coverage: encrypted create/write/fsync/release persists ciphertext + sidecar', async () => {
+test('fuse-ops coverage: encrypted create/write/fsync/release persists ciphertext + sidecar', async () => {
   const backstore = tmpDir();
 
   const { ops } = makeFuseOps({
@@ -107,7 +107,7 @@ test('fuse-ops-v1 coverage: encrypted create/write/fsync/release persists cipher
   assert.ok(fs.existsSync(sidecarDekPath(real)), 'expected DEK sidecar to exist');
 });
 
-test('fuse-ops-v1 coverage: encrypted truncate updates ciphertext', async () => {
+test('fuse-ops coverage: encrypted truncate updates ciphertext', async () => {
   const backstore = tmpDir();
   const real = path.join(backstore, 'secret.txt');
 
@@ -132,7 +132,7 @@ test('fuse-ops-v1 coverage: encrypted truncate updates ciphertext', async () => 
   assert.equal(out.plaintext.toString('utf8'), 'hello');
 });
 
-test('fuse-ops-v1 coverage: encrypted chmod + utimens attempt to sync sidecar', async () => {
+test('fuse-ops coverage: encrypted chmod + utimens attempt to sync sidecar', async () => {
   const backstore = tmpDir();
   const real = path.join(backstore, 'secret.txt');
 
@@ -165,7 +165,7 @@ test('fuse-ops-v1 coverage: encrypted chmod + utimens attempt to sync sidecar', 
   assert.ok(Math.abs(stSidecar2.mtimeMs - (ts.tv_sec * 1000)) < 2000);
 });
 
-test('fuse-ops-v1 coverage: encrypted unlink removes ciphertext and sidecar (best-effort)', async () => {
+test('fuse-ops coverage: encrypted unlink removes ciphertext and sidecar (best-effort)', async () => {
   const backstore = tmpDir();
   const real = path.join(backstore, 'secret.txt');
 
@@ -190,7 +190,7 @@ test('fuse-ops-v1 coverage: encrypted unlink removes ciphertext and sidecar (bes
   assert.ok(!fs.existsSync(sidecar));
 });
 
-test('fuse-ops-v1 coverage: rename across plaintext/encrypted boundary is denied', async () => {
+test('fuse-ops coverage: rename across plaintext/encrypted boundary is denied', async () => {
   const backstore = tmpDir();
   fs.mkdirSync(path.join(backstore, 'workspace'), { recursive: true });
   fs.writeFileSync(path.join(backstore, 'workspace', 'a.txt'), 'a');
@@ -206,7 +206,7 @@ test('fuse-ops-v1 coverage: rename across plaintext/encrypted boundary is denied
   assert.equal(code, -FakeFuse.EACCES);
 });
 
-test('fuse-ops-v1 hardening: mkdir/rmdir must not bypass access checks', async () => {
+test('fuse-ops hardening: mkdir/rmdir must not bypass access checks', async () => {
   const backstore = tmpDir();
 
   const { ops } = makeFuseOps({

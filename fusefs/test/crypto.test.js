@@ -5,12 +5,12 @@ const {
   randomKey32,
   encodeEncryptedFileV1,
   decodeEncryptedFileV1,
-  V1: FILE_V1,
-} = require('../src/crypto-v1');
+  Initial: FILE_V1,
+} = require('../src/crypto');
 
-const { newDek, encodeWrappedDekV1, decodeWrappedDekV1, V1: DEK_V1 } = require('../src/dek-store-v1');
+const { newDek, encodeWrappedDekV1, decodeWrappedDekV1, Initial: DEK_V1 } = require('../src/dek-store');
 
-test('crypto-v1: encrypt/decrypt roundtrip', () => {
+test('crypto: encrypt/decrypt roundtrip', () => {
   const dek = randomKey32();
   const plaintext = Buffer.from('hello secret world', 'utf8');
 
@@ -22,7 +22,7 @@ test('crypto-v1: encrypt/decrypt roundtrip', () => {
   assert.equal(blob.includes(plaintext), false);
 });
 
-test('crypto-v1: wrong key fails', () => {
+test('crypto: wrong key fails', () => {
   const dek = randomKey32();
   const dek2 = randomKey32();
   const plaintext = Buffer.from('hello secret world', 'utf8');
@@ -31,7 +31,7 @@ test('crypto-v1: wrong key fails', () => {
   assert.throws(() => decodeEncryptedFileV1({ dek: dek2, blob }));
 });
 
-test('crypto-v1: tamper detection (ciphertext)', () => {
+test('crypto: tamper detection (ciphertext)', () => {
   const dek = randomKey32();
   const plaintext = Buffer.from('attack at dawn', 'utf8');
 
@@ -43,7 +43,7 @@ test('crypto-v1: tamper detection (ciphertext)', () => {
   assert.throws(() => decodeEncryptedFileV1({ dek, blob }));
 });
 
-test('crypto-v1: version mismatch rejected', () => {
+test('crypto: version mismatch rejected', () => {
   const dek = randomKey32();
   const plaintext = Buffer.from('x', 'utf8');
 
@@ -53,7 +53,7 @@ test('crypto-v1: version mismatch rejected', () => {
   assert.throws(() => decodeEncryptedFileV1({ dek, blob }), /unsupported version/);
 });
 
-test('dek-store-v1: wrap/unwrap roundtrip', () => {
+test('dek-store: wrap/unwrap roundtrip', () => {
   const kek = randomKey32();
   const dek = newDek();
   const blob = encodeWrappedDekV1({ kek, dek });
@@ -61,7 +61,7 @@ test('dek-store-v1: wrap/unwrap roundtrip', () => {
   assert.equal(out.equals(dek), true);
 });
 
-test('dek-store-v1: wrong KEK fails', () => {
+test('dek-store: wrong KEK fails', () => {
   const kek = randomKey32();
   const kek2 = randomKey32();
   const dek = newDek();
@@ -69,7 +69,7 @@ test('dek-store-v1: wrong KEK fails', () => {
   assert.throws(() => decodeWrappedDekV1({ kek: kek2, blob }));
 });
 
-test('dek-store-v1: version mismatch rejected', () => {
+test('dek-store: version mismatch rejected', () => {
   const kek = randomKey32();
   const dek = newDek();
   const blob = Buffer.from(encodeWrappedDekV1({ kek, dek }));

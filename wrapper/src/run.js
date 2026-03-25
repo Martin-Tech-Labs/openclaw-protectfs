@@ -245,7 +245,7 @@ async function run(cfg) {
   }
   if (mig.migrated) log(`migration complete: moved legacy mountpoint content to ${mig.legacyDir}`);
 
-  // Task 05: liveness socket contract (v1)
+  // Task 05: liveness socket contract
   // - wrapper creates a unix socket in the mountpoint
   // - wrapper passes its path to both fuse and gateway via env
   // - wrapper removes the socket on shutdown
@@ -279,7 +279,7 @@ async function run(cfg) {
 
   const childEnv = buildChildEnv({
     OCPROTECTFS_LIVENESS_SOCK: liveness.path,
-    // Bring-up/testing gate for v1 fail-closed behavior. We pass this through
+    // Bring-up/testing gate for initial fail-closed behavior. We pass this through
     // explicitly rather than inheriting the full parent env.
     ...(process.env.OCPROTECTFS_GATEWAY_ACCESS_ALLOWED === '1' ? { OCPROTECTFS_GATEWAY_ACCESS_ALLOWED: '1' } : {}),
   });

@@ -1,9 +1,9 @@
 # STATUS
 
-## V1
-- **V1: COMPLETE** (baseline implementation + tests + operator docs).
+## Initial
+- **Initial: COMPLETE** (baseline implementation + tests + operator docs).
 - Last updated: 2026-03-25 (bookkeeping)
-- Bookkeeping: this repo heartbeat/loop cron can be disabled unless you want post-V1 verification work (see below).
+- Bookkeeping: this repo heartbeat/loop cron can be disabled unless you want post-initial verification work (see below).
 
 ## Current focus
 ### Post-PLAN 19 verification (confidence pass)
@@ -32,7 +32,7 @@ Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
 - (none — see “Post-PLAN 19 verification” checklist above)
 
 ## Final bookkeeping
-- This file/README now explicitly declare **V1: COMPLETE**.
-- Recommendation: disable the protectfs repo heartbeat cron (this loop) unless you want post-V1 verification work.
+- This file/README now explicitly declare **Initial: COMPLETE**.
+- Recommendation: disable the protectfs repo heartbeat cron (this loop) unless you want post-initial verification work.
 
 - PLAN 27-readme-tldr-setup: add README TL;DR with clone/build/install/migrate/keychain/run/verify/rollback steps
