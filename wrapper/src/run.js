@@ -279,9 +279,6 @@ async function run(cfg) {
 
   const childEnv = buildChildEnv({
     OCPROTECTFS_LIVENESS_SOCK: liveness.path,
-    // Bring-up/testing gate for initial fail-closed behavior. We pass this through
-    // explicitly rather than inheriting the full parent env.
-    ...(process.env.OCPROTECTFS_GATEWAY_ACCESS_ALLOWED === '1' ? { OCPROTECTFS_GATEWAY_ACCESS_ALLOWED: '1' } : {}),
   });
 
   const fuseArgs = [...cfg.fuseArgs, '--kek-fd', '3'];

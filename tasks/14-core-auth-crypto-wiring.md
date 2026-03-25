@@ -45,6 +45,6 @@ Wire the existing `core` (authorization checks) and `crypto` (encrypted-at-rest)
 - Careful with errno mapping: operations must return correct negative errno values to avoid confusing apps.
 - Avoid exposing any decrypted bytes to disk (temporary files) during read/write.
 - Current wiring uses env-based stubs for initial bring-up:
-  - `OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1` gates encrypted-path access (default deny).
+  - wrapper liveness socket (`OCPROTECTFS_LIVENESS_SOCK`) gates encrypted-path access (default deny).
   - `OCPROTECTFS_KEK_B64` provides the 32-byte KEK (base64) for decrypt/encrypt.
 - Encrypted file content is stored at the same relative backstore path as ciphertext, with a sidecar wrapped-DEK at `*.ocpfs.dek`.

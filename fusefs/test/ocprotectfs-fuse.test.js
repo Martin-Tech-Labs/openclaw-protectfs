@@ -35,6 +35,35 @@ function canAttemptRealMount() {
   return true;
 }
 
+async function withTempLivenessSocket(baseDir, fn) {
+  // Keep socket paths short on macOS (see Task 05 notes).
+  const sockPath = path.join(baseDir, 'liveness.sock');
+  try {
+    fs.unlinkSync(sockPath);
+  } catch (_) {
+    // ignore
+  }
+
+  const net = require('node:net');
+  const server = net.createServer((c) => c.end());
+
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(sockPath, () => resolve());
+  });
+
+  try {
+    return await fn(sockPath);
+  } finally {
+    await new Promise((resolve) => server.close(() => resolve()));
+    try {
+      fs.unlinkSync(sockPath);
+    } catch (_) {
+      // ignore
+    }
+  }
+}
+
 test('ocprotectfs-fuse: --help exits 0', async () => {
   const p = spawn(process.execPath, [FUSE_BIN, '--help'], { stdio: ['ignore', 'pipe', 'pipe'] });
 
@@ -383,53 +412,55 @@ test('ocprotectfs-fuse: best-effort real mount encrypted-at-rest (skipped in CI)
   // 32-byte KEK, base64
   const kek = Buffer.alloc(32, 7).toString('base64');
 
-  const p = spawn(process.execPath, [FUSE_BIN, '--backstore', backstore, '--mountpoint', mountpoint], {
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: {
-      ...process.env,
-      OCPROTECTFS_GATEWAY_ACCESS_ALLOWED: '1',
-      OCPROTECTFS_KEK_B64: kek,
-    },
-  });
-
-  try {
-    await new Promise((resolve, reject) => {
-      const timeoutMs = 8000;
-      const tt = setTimeout(() => reject(new Error('timeout waiting for READY (mount)')), timeoutMs);
-      let buf = '';
-      p.stdout.on('data', (d) => {
-        buf += d.toString('utf8');
-        if (buf.includes('READY')) {
-          clearTimeout(tt);
-          resolve();
-        }
-      });
-      p.on('exit', (code, signal) => {
-        if (signal || (code && code !== 0)) {
-          clearTimeout(tt);
-          const why = signal ? `signal=${signal}` : `code=${code}`;
-          reject(new Error(`fuse process exited before READY (${why})`));
-        }
-      });
+  await withTempLivenessSocket(base, async (sockPath) => {
+    const p = spawn(process.execPath, [FUSE_BIN, '--backstore', backstore, '--mountpoint', mountpoint], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        OCPROTECTFS_LIVENESS_SOCK: sockPath,
+        OCPROTECTFS_KEK_B64: kek,
+      },
     });
 
-    const mountFile = path.join(mountpoint, 'secret.txt');
-    const backFile = path.join(backstore, 'secret.txt');
-    const dekFile = path.join(backstore, 'secret.txt.ocpfs.dek');
+    try {
+      await new Promise((resolve, reject) => {
+        const timeoutMs = 8000;
+        const tt = setTimeout(() => reject(new Error('timeout waiting for READY (mount)')), timeoutMs);
+        let buf = '';
+        p.stdout.on('data', (d) => {
+          buf += d.toString('utf8');
+          if (buf.includes('READY')) {
+            clearTimeout(tt);
+            resolve();
+          }
+        });
+        p.on('exit', (code, signal) => {
+          if (signal || (code && code !== 0)) {
+            clearTimeout(tt);
+            const why = signal ? `signal=${signal}` : `code=${code}`;
+            reject(new Error(`fuse process exited before READY (${why})`));
+          }
+        });
+      });
 
-    fs.writeFileSync(mountFile, 'super secret');
+      const mountFile = path.join(mountpoint, 'secret.txt');
+      const backFile = path.join(backstore, 'secret.txt');
+      const dekFile = path.join(backstore, 'secret.txt.ocpfs.dek');
 
-    // ciphertext on disk
-    const back = fs.readFileSync(backFile);
-    const plaintext = Buffer.from('super secret');
-    if (back.includes(plaintext)) {
-      throw new Error('expected ciphertext not to contain plaintext');
+      fs.writeFileSync(mountFile, 'super secret');
+
+      // ciphertext on disk
+      const back = fs.readFileSync(backFile);
+      const plaintext = Buffer.from('super secret');
+      if (back.includes(plaintext)) {
+        throw new Error('expected ciphertext not to contain plaintext');
+      }
+
+      // sidecar exists on disk but is hidden from mount
+      assert.ok(fs.existsSync(dekFile));
+      assert.throws(() => fs.readFileSync(path.join(mountpoint, 'secret.txt.ocpfs.dek')), /ENOENT|not found/i);
+    } finally {
+      await killAndWait(p, 2000);
     }
-
-    // sidecar exists on disk but is hidden from mount
-    assert.ok(fs.existsSync(dekFile));
-    assert.throws(() => fs.readFileSync(path.join(mountpoint, 'secret.txt.ocpfs.dek')), /ENOENT|not found/i);
-  } finally {
-    await killAndWait(p, 2000);
-  }
+  });
 });

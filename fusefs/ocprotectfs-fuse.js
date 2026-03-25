@@ -11,7 +11,7 @@
 // - everything else => encrypted-at-rest, and requires gateway access checks
 //
 // IMPORTANT SECURITY DEFAULTS:
-// - fail closed: encrypted paths require OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1
+// - fail closed: encrypted paths require wrapper liveness socket (OCPROTECTFS_LIVENESS_SOCK)
 // - encrypted paths also require a KEK (32 bytes)
 //   - recommended: wrapper passes KEK via --kek-fd <n>
 //   - legacy/testing: OCPROTECTFS_KEK_B64
@@ -90,7 +90,7 @@ Flags:
   -h, --help             Show help
 
 Environment:
-  OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1     Allow encrypted-path operations (fail-closed default deny)
+  OCPROTECTFS_LIVENESS_SOCK=<path>         Wrapper liveness unix socket (required for encrypted-path ops)
   OCPROTECTFS_PLAINTEXT_PREFIXES=a,b,c     Comma-separated passthrough prefixes (used if no flags provided)
   OCPROTECTFS_KEK_B64=<base64>             (legacy) 32-byte KEK, base64-encoded
 `);
@@ -155,7 +155,19 @@ function main() {
 
   const Fuse = loadFuseNative();
 
-  const gatewayAccessAllowed = process.env.OCPROTECTFS_GATEWAY_ACCESS_ALLOWED === '1';
+  // Encrypted-path ops fail closed unless the wrapper liveness socket is present.
+  // This removes the bring-up env gate and makes the wrapper the required launch boundary.
+  const livenessSock = process.env.OCPROTECTFS_LIVENESS_SOCK;
+  let gatewayAccessAllowed = false;
+  if (livenessSock) {
+    try {
+      const st = fs.lstatSync(livenessSock);
+      gatewayAccessAllowed = st.isSocket();
+    } catch (_) {
+      gatewayAccessAllowed = false;
+    }
+  }
+
   const kek = loadKek(cfg);
 
   const { ops } = makeFuseOps({
