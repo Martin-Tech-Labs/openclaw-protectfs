@@ -6,12 +6,14 @@ const path = require('node:path');
 // It is intentionally independent of macFUSE bindings so it can be unit tested.
 //
 // Policy (from tasks/01-design.md):
-// - Plaintext passthrough for `workspace/**` and `workspace-joao/**`
+// - Plaintext passthrough for selected top-level prefixes (default: workspace/** and workspace-joao/**)
 // - Encrypt-at-rest for everything else
 //
 // Notes:
 // - FUSE paths are expected to be POSIX-like relative paths (no leading slash).
 // - We defensively reject suspicious relative paths (`..`, backslashes, NUL).
+
+const DEFAULT_PLAINTEXT_PREFIXES = Object.freeze(['workspace', 'workspace-joao']);
 
 function assertSafeRelative(rel) {
   if (typeof rel !== 'string') throw new Error('rel must be a string');
@@ -31,24 +33,64 @@ function assertSafeRelative(rel) {
   return norm;
 }
 
-function isPlaintextPath(rel) {
+function normalizePlaintextPrefixes(prefixes) {
+  if (prefixes == null) return null;
+  if (!Array.isArray(prefixes)) throw new Error('plaintextPrefixes must be an array');
+
+  const out = [];
+  for (const p of prefixes) {
+    const s = String(p).trim();
+    if (!s) continue;
+    if (s.includes('/')) throw new Error('plaintext prefix must be a single path segment');
+    if (s === '.' || s === '..') throw new Error('invalid plaintext prefix');
+    out.push(s);
+  }
+
+  // De-dupe while preserving order.
+  return out.filter((p, i) => out.indexOf(p) === i);
+}
+
+function parseEnvPlaintextPrefixes() {
+  const v = process.env.OCPROTECTFS_PLAINTEXT_PREFIXES;
+  if (v == null) return null;
+
+  // Allow explicit empty string to mean “no passthrough prefixes”.
+  const s = String(v).trim();
+  if (s.length === 0) return [];
+
+  return normalizePlaintextPrefixes(s.split(',').map((x) => x.trim()));
+}
+
+function getPlaintextPrefixes(opts) {
+  const fromOpts = normalizePlaintextPrefixes(opts && opts.plaintextPrefixes);
+  if (fromOpts) return fromOpts;
+
+  const fromEnv = parseEnvPlaintextPrefixes();
+  if (fromEnv) return fromEnv;
+
+  return DEFAULT_PLAINTEXT_PREFIXES;
+}
+
+function isPlaintextPath(rel, opts = {}) {
   const clean = assertSafeRelative(rel);
   if (clean === '.') return false;
   const [first] = clean.split('/');
-  return first === 'workspace' || first === 'workspace-joao';
+
+  const prefixes = getPlaintextPrefixes(opts);
+  return prefixes.includes(first);
 }
 
-function classifyPath(rel) {
+function classifyPath(rel, opts = {}) {
   const clean = assertSafeRelative(rel);
 
-  if (isPlaintextPath(clean)) {
+  if (isPlaintextPath(clean, opts)) {
     return {
       rel: clean,
       storage: 'plaintext',
       // Plaintext paths are intended for collaborative/dev content.
       // Access control for them is out-of-scope for v1.
       requiresGatewayAccessChecks: false,
-      reason: 'workspace passthrough',
+      reason: 'passthrough prefix',
     };
   }
 
@@ -63,6 +105,7 @@ function classifyPath(rel) {
 }
 
 module.exports = {
+  DEFAULT_PLAINTEXT_PREFIXES,
   assertSafeRelative,
   isPlaintextPath,
   classifyPath,

@@ -55,11 +55,12 @@ function flagRequiresWrite(flags) {
  * @param {object} args.Fuse - fuse-native module (only used for errno constants)
  * @param {boolean} args.gatewayAccessAllowed
  * @param {Buffer|null} args.kek - 32-byte KEK for encrypted paths
+ * @param {string[]} [args.plaintextPrefixes] - configurable plaintext passthrough prefixes
  */
-function makeFuseOps({ backstore, Fuse, gatewayAccessAllowed, kek }) {
+function makeFuseOps({ backstore, Fuse, gatewayAccessAllowed, kek, plaintextPrefixes }) {
   const authz = ({ op, rel }) => {
     try {
-      const res = authorizeOp({ op, rel, gatewayAccessAllowed });
+      const res = authorizeOp({ op, rel, gatewayAccessAllowed, plaintextPrefixes });
       if (res.ok) return { ok: true };
       const err = new Error(res.reason);
       err.code = res.code;
@@ -91,7 +92,7 @@ function makeFuseOps({ backstore, Fuse, gatewayAccessAllowed, kek }) {
       cb(errnoCode(res.err, Fuse));
       return null;
     }
-    return classifyPath(rel);
+    return classifyPath(rel, { plaintextPrefixes });
   };
 
   async function loadEncryptedHandle({ real, flags, createIfMissing }) {

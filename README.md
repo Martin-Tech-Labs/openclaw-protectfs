@@ -49,9 +49,13 @@ This project provides a **path-compatible** mount over `~/.openclaw` that:
 In this project, macFUSE routes file operations on `~/.openclaw` into our FUSE daemon, which then enforces policy and reads/writes the backstore.
 
 ## Policy (v1)
-- Plaintext passthrough:
-  - `~/.openclaw/workspace/**`
-  - `~/.openclaw/workspace-joao/**`
+- Plaintext passthrough (configurable): selected *top-level prefixes* under the mount.
+  - Default passthrough prefixes (legacy behavior):
+    - `~/.openclaw/workspace/**`
+    - `~/.openclaw/workspace-joao/**`
+  - Configure passthrough prefixes:
+    - FUSE flags (repeatable): `ocprotectfs-fuse --plaintext-prefix workspace --plaintext-prefix workspace-joao`
+    - Or env var (comma-separated): `OCPROTECTFS_PLAINTEXT_PREFIXES=workspace,workspace-joao`
 
 - Encrypted-at-rest (everything else under `~/.openclaw/**`)
   - stored encrypted in `~/.openclaw.real`
