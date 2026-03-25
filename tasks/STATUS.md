@@ -39,3 +39,5 @@ Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
 ## Final bookkeeping
 - This file/README now explicitly declare **V1: COMPLETE**.
 - Recommendation: disable the protectfs repo heartbeat cron (this loop) unless you want post-V1 verification work.
+
+- PLAN 27-readme-tldr-setup: add README TL;DR with clone/build/install/migrate/keychain/run/verify/rollback steps

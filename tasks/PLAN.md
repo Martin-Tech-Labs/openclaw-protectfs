@@ -58,3 +58,5 @@ V1 is considered "ready" when:
 - PLAN 25-license-badges: add MIT LICENSE + README badges (CI/license)
 
 - PLAN 26-remove-v1-references: remove v1 references in code/docs; keep only real format/version markers
+
+- PLAN 27-readme-tldr-setup: add README TL;DR with clone/build/install/migrate/keychain/run/verify/rollback steps
