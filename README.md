@@ -9,6 +9,7 @@ macFUSE-based protective filesystem overlay for OpenClaw on macOS.
 ## Status
 - **V1: COMPLETE** (see `tasks/STATUS.md` for the canonical tracker)
 - Recommendation: disable the protectfs repo heartbeat cron unless you want post-V1 verification/backlog work.
+- Last updated: 2026-03-25 (final bookkeeping)
 
 **Final bookkeeping:** V1 is complete; this repo loop can be disabled.
 
