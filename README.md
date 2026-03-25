@@ -25,9 +25,6 @@ npm install
 3) Start the wrapper (mounts FUSE at `~/.openclaw`, then spawns the OpenClaw gateway):
 
 ```bash
-# v1 bring-up gate (fail-closed unless explicitly allowed)
-export OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1
-
 # KEK (Key Encryption Key) will be retrieved/created in macOS Keychain
 #   service=ocprotectfs, account=kek
 # and passed to the FUSE daemon in-memory via a pipe (no env secret).
@@ -248,9 +245,9 @@ OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 npm test
 
 ## Running
 
-### Environment variables (bring-up)
-For initial bring-up there is an explicit gate to fail closed unless authorized:
-- `OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1`: enables encrypted-path access checks (bring-up/testing gate)
+### Environment variables
+Wrapper-provided:
+- `OCPROTECTFS_LIVENESS_SOCK`: unix socket path created by the wrapper and passed to child processes. Encrypted-path operations fail closed unless this socket is present.
 
 KEK handling (recommended):
 - Wrapper retrieves/creates KEK from macOS Keychain (`service=ocprotectfs`, `account=kek`).
@@ -270,7 +267,7 @@ Example (best-effort) invocation:
 
 ```bash
 # Use the repo's fuse daemon + the existing OpenClaw gateway node entry.
-export OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1
+# (Wrapper sets OCPROTECTFS_LIVENESS_SOCK automatically for children.)
 
 # KEK will be retrieved/created in Keychain and passed to FUSE via FD (no env secret).
 node wrapper/ocprotectfs.js   --require-fuse-ready   --fuse-bin "$(command -v node)"   --fuse-arg "$(pwd)/fusefs/ocprotectfs-fuse.js"   --gateway-bin "$(command -v node)"   --gateway-arg "/Users/agent/openclaw/node_modules/openclaw/dist/index.js"   --gateway-arg gateway   --gateway-arg --port   --gateway-arg 18789

@@ -34,7 +34,7 @@ See diagrams:
 
 ### Runtime env (initial bring-up)
 Initial currently uses an explicit bring-up gate to fail closed unless authorized:
-- `OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1` enables encrypted-path access checks.
+- Encrypted-path access checks fail closed unless the wrapper liveness socket (`OCPROTECTFS_LIVENESS_SOCK`) is present.
 
 KEK handling (PLAN 19):
 - The wrapper retrieves/creates the 32-byte KEK from **macOS Keychain** (`service=ocprotectfs`, `account=kek`).

@@ -7,7 +7,7 @@ These tests should focus on **common editor/workflow operations** (atomic save p
 
 - `workspace/**` (and `workspace-joao/**`) remain **plaintext passthrough**
 - encrypted-by-policy paths remain **fail-closed by default**
-- when `OCPROTECTFS_GATEWAY_ACCESS_ALLOWED=1` + `OCPROTECTFS_KEK_B64` are provided, encrypted-at-rest behavior holds
+- when `OCPROTECTFS_LIVENESS_SOCK` + `OCPROTECTFS_KEK_B64` are provided, encrypted-at-rest behavior holds
 
 ## Why
 Mocked FUSE tests can miss:
