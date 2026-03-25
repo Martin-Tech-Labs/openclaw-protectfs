@@ -8,7 +8,18 @@ const os = require('node:os');
 const FUSE_BIN = path.join(__dirname, '..', 'ocprotectfs-fuse.js');
 
 function canAttemptRealMount() {
+  // Real mounts can hang on developer machines depending on macFUSE state
+  // (system extension approval, permissions, stale mounts, etc.). Keep these
+  // tests opt-in so `npm test` is reliable by default.
+  if (process.env.OCPROTECTFS_RUN_REAL_MOUNT_TESTS !== '1') return false;
+
   if (process.platform !== 'darwin') return false;
+
+  // fuse-native can be sensitive to Node ABI versions. The optional dependency
+  // we use is known to be unstable on very new Node majors. Prefer running
+  // real-mount tests under an LTS Node.
+  const nodeMajor = Number(String(process.versions.node || '').split('.')[0]);
+  if (Number.isFinite(nodeMajor) && nodeMajor >= 23) return false;
 
   // Heuristic: presence of macFUSE install.
   if (!fs.existsSync('/Library/Filesystems/macfuse.fs') && !fs.existsSync('/Library/Filesystems/osxfuse.fs')) return false;
@@ -63,6 +74,33 @@ function fsyncDirSafe(dirPath) {
   }
 }
 
+async function killAndWait(p, timeoutMs = 2000) {
+  if (!p || p.killed) return;
+
+  try {
+    p.kill('SIGTERM');
+  } catch {
+    // ignore
+  }
+
+  await new Promise((resolve) => {
+    const tt = setTimeout(() => {
+      try {
+        p.kill('SIGKILL');
+      } catch {
+        // ignore
+      }
+      // Give SIGKILL a brief moment.
+      setTimeout(resolve, 200);
+    }, timeoutMs);
+
+    p.once('close', () => {
+      clearTimeout(tt);
+      resolve();
+    });
+  });
+}
+
 test('ocprotectfs-fuse: best-effort real mount passthrough + fail-closed (skipped in CI)', async (t) => {
   if (!canAttemptRealMount()) {
     t.skip('requires macOS + macFUSE + fuse-native');
@@ -91,10 +129,11 @@ test('ocprotectfs-fuse: best-effort real mount passthrough + fail-closed (skippe
           resolve();
         }
       });
-      p.on('exit', (code) => {
-        if (code && code !== 0) {
+      p.on('exit', (code, signal) => {
+        if (signal || (code && code !== 0)) {
           clearTimeout(tt);
-          reject(new Error(`fuse process exited before READY (code=${code})`));
+          const why = signal ? `signal=${signal}` : `code=${code}`;
+          reject(new Error(`fuse process exited before READY (${why})`));
         }
       });
     });
@@ -116,9 +155,7 @@ test('ocprotectfs-fuse: best-effort real mount passthrough + fail-closed (skippe
     // Encrypted-by-policy paths should deny by default (fail closed).
     assert.throws(() => fs.writeFileSync(path.join(mountpoint, 'secret.txt'), 'nope'), /EACCES|operation not permitted/i);
   } finally {
-    // terminate cleanly
-    p.kill('SIGTERM');
-    await new Promise((resolve) => p.on('close', () => resolve()));
+    await killAndWait(p, 2000);
   }
 });
 
@@ -150,10 +187,11 @@ test('ocprotectfs-fuse: best-effort real mount editor-style atomic save (workspa
           resolve();
         }
       });
-      p.on('exit', (code) => {
-        if (code && code !== 0) {
+      p.on('exit', (code, signal) => {
+        if (signal || (code && code !== 0)) {
           clearTimeout(tt);
-          reject(new Error(`fuse process exited before READY (code=${code})`));
+          const why = signal ? `signal=${signal}` : `code=${code}`;
+          reject(new Error(`fuse process exited before READY (${why})`));
         }
       });
     });
@@ -192,8 +230,7 @@ test('ocprotectfs-fuse: best-effort real mount editor-style atomic save (workspa
     assert.equal(fs.readFileSync(backFile, 'utf8'), 'v2');
     assert.equal(fs.existsSync(path.join(backstore, 'workspace', tmpName)), false);
   } finally {
-    p.kill('SIGTERM');
-    await new Promise((resolve) => p.on('close', () => resolve()));
+    await killAndWait(p, 2000);
   }
 });
 
@@ -225,10 +262,11 @@ test('ocprotectfs-fuse: best-effort real mount temp/swap file patterns (workspac
           resolve();
         }
       });
-      p.on('exit', (code) => {
-        if (code && code !== 0) {
+      p.on('exit', (code, signal) => {
+        if (signal || (code && code !== 0)) {
           clearTimeout(tt);
-          reject(new Error(`fuse process exited before READY (code=${code})`));
+          const why = signal ? `signal=${signal}` : `code=${code}`;
+          reject(new Error(`fuse process exited before READY (${why})`));
         }
       });
     });
@@ -250,8 +288,7 @@ test('ocprotectfs-fuse: best-effort real mount temp/swap file patterns (workspac
       assert.equal(fs.existsSync(backFp), false);
     }
   } finally {
-    p.kill('SIGTERM');
-    await new Promise((resolve) => p.on('close', () => resolve()));
+    await killAndWait(p, 2000);
   }
 });
 
@@ -283,10 +320,11 @@ test('ocprotectfs-fuse: best-effort real mount chmod/utimens/fsync/statfs (works
           resolve();
         }
       });
-      p.on('exit', (code) => {
-        if (code && code !== 0) {
+      p.on('exit', (code, signal) => {
+        if (signal || (code && code !== 0)) {
           clearTimeout(tt);
-          reject(new Error(`fuse process exited before READY (code=${code})`));
+          const why = signal ? `signal=${signal}` : `code=${code}`;
+          reject(new Error(`fuse process exited before READY (${why})`));
         }
       });
     });
@@ -326,8 +364,7 @@ test('ocprotectfs-fuse: best-effort real mount chmod/utimens/fsync/statfs (works
     const backFp = path.join(backstore, 'workspace', 'meta.txt');
     assert.equal(fs.readFileSync(backFp, 'utf8'), 'meta');
   } finally {
-    p.kill('SIGTERM');
-    await new Promise((resolve) => p.on('close', () => resolve()));
+    await killAndWait(p, 2000);
   }
 });
 
@@ -367,10 +404,11 @@ test('ocprotectfs-fuse: best-effort real mount encrypted-at-rest (skipped in CI)
           resolve();
         }
       });
-      p.on('exit', (code) => {
-        if (code && code !== 0) {
+      p.on('exit', (code, signal) => {
+        if (signal || (code && code !== 0)) {
           clearTimeout(tt);
-          reject(new Error(`fuse process exited before READY (code=${code})`));
+          const why = signal ? `signal=${signal}` : `code=${code}`;
+          reject(new Error(`fuse process exited before READY (${why})`));
         }
       });
     });
@@ -392,7 +430,6 @@ test('ocprotectfs-fuse: best-effort real mount encrypted-at-rest (skipped in CI)
     assert.ok(fs.existsSync(dekFile));
     assert.throws(() => fs.readFileSync(path.join(mountpoint, 'secret.txt.ocpfs.dek')), /ENOENT|not found/i);
   } finally {
-    p.kill('SIGTERM');
-    await new Promise((resolve) => p.on('close', () => resolve()));
+    await killAndWait(p, 2000);
   }
 });
