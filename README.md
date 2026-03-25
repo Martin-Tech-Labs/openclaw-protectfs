@@ -1,5 +1,9 @@
 # openclaw-protectfs
 
+[![CI](https://github.com/Martin-Tech-Labs/openclaw-protectfs/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Martin-Tech-Labs/openclaw-protectfs/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+
 macFUSE-based protective filesystem overlay for OpenClaw on macOS.
 
 ## Status

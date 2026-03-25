@@ -30,3 +30,5 @@ For non-trivial PRs:
 - PLAN 22-coverage-improvements: add coverage tooling + thresholds; expand tests to raise coverage
 - PLAN 23-owasp-pass-fixes: OWASP-oriented review + fixes + document remaining limitations
 - PLAN 24-macos-ci-strategy: add macos CI job + clarify macFUSE runner constraints; optional self-hosted runner path
+
+- PLAN 25-license-badges: add MIT LICENSE + README badges (CI/license)

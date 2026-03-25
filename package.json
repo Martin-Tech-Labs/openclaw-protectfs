@@ -1,16 +1,16 @@
 {
-  "name": "openclaw-protectfs",
-  "private": true,
-  "version": "0.0.0",
-  "description": "macFUSE-based protective filesystem wrapper skeleton for OpenClaw",
-  "license": "MIT",
   "bin": {
     "ocprotectfs": "wrapper/ocprotectfs.js"
   },
+  "description": "macFUSE-based protective filesystem wrapper skeleton for OpenClaw",
+  "license": "MIT",
+  "name": "openclaw-protectfs",
+  "optionalDependencies": {
+    "fuse-native": "2.2.6"
+  },
+  "private": true,
   "scripts": {
     "test": "node --test"
   },
-  "optionalDependencies": {
-    "fuse-native": "2.2.6"
-  }
+  "version": "0.0.0"
 }
