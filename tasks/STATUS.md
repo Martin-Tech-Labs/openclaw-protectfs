@@ -6,6 +6,17 @@
 - Bookkeeping: this repo heartbeat/loop cron can be disabled unless you want post-initial verification work (see below).
 
 ## Current focus
+### Swift supervisor rewrite (#86) — Phase 1 (scaffold) in progress
+- **Current item:** #86 (Rewrite supervisor as native Swift executable)
+- **Phase issue:** #112
+- **PR:** (not opened yet)
+- **Status:** In Progress
+- **Review rounds:** 0
+
+Follow-ups (tracked as separate issues):
+- #113 (process lifecycle + liveness socket)
+- #114 (Keychain KEK management + ACL pinning)
+
 ### Swift rewrite (#87) — Phase 1 in review
 - **Current item:** #107 (Swift FUSE package + minimal mount skeleton)
 - **PR:** #111
