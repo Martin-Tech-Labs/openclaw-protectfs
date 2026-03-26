@@ -1,4 +1,4 @@
-.PHONY: test coverage coverage-check lint fmt
+.PHONY: test coverage coverage-check lint fmt swift-build
 
 test:
 	npm test
@@ -14,3 +14,6 @@ lint:
 
 fmt:
 	@echo "(placeholder) add prettier in later tasks"
+
+swift-build:
+	cd fusefs-swift && swift build
