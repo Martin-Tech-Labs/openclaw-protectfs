@@ -6,6 +6,16 @@
 - Bookkeeping: this repo heartbeat/loop cron can be disabled unless you want post-initial verification work (see below).
 
 ## Current focus
+### Swift rewrite (#87) — Phase 1 in review
+- **Current item:** #107 (Swift FUSE package + minimal mount skeleton)
+- **PR:** #111
+- **Status:** In Review
+- **Review rounds:** 0
+
+Notes:
+- This PR is intentionally non-functional; it must not use closing keywords.
+- Follow-ups tracked in #108 and #109.
+
 ### Post-PLAN 19 verification (confidence pass)
 Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
 
