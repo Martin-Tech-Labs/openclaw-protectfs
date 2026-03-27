@@ -11,3 +11,7 @@ yarn-error.log*
 
 # Local PR body scratch files
 pr-body-*.md
+
+# SwiftPM
+**/.build/
+.swiftpm/
