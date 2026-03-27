@@ -8,8 +8,8 @@
 ## Current focus
 ### Quickstart one-command script (#88)
 - **Current item:** #88 (Quickstart: one-command setup script)
-- **PR:** (pending)
-- **Status:** In Progress
+- **PR:** #116
+- **Status:** In Review
 - **Review rounds:** 0
 
 ### Swift supervisor rewrite (#86) — Phase 1 (scaffold)
