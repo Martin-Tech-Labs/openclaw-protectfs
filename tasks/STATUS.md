@@ -11,7 +11,7 @@
 - **Phase issue:** #112
 - **PR:** #115
 - **Status:** In Review
-- **Review rounds:** 0
+- **Review rounds:** 1
 
 Follow-ups (tracked as separate issues):
 - #113 (process lifecycle + liveness socket)

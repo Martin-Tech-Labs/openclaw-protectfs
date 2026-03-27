@@ -3,6 +3,12 @@ import Testing
 
 @Test func helpTextContainsKnownFlags() {
   let t = CLI.helpText(program: "ocprotectfs-supervisor")
+  #expect(t.contains("--help"))
+  #expect(t.contains("--version"))
+  #expect(t.contains("--config"))
+  #expect(t.contains("--mount"))
+  #expect(t.contains("--unmount"))
+  #expect(t.contains("--status"))
   #expect(t.contains("--backstore"))
   #expect(t.contains("--mountpoint"))
   #expect(t.contains("--fuse-bin"))
@@ -13,6 +19,9 @@ import Testing
 @Test func parseDefaults() throws {
   let res = try CLI.parse([])
   #expect(res.showHelp == false)
+  #expect(res.showVersion == false)
+  #expect(res.configPath == nil)
+  #expect(res.action == .run)
   #expect(res.options.backstore == "~/.openclaw.real")
   #expect(res.options.mountpoint == "~/.openclaw")
   #expect(res.options.fuseReadyTimeoutMs == 2000)
@@ -28,6 +37,19 @@ import Testing
   #expect(res.options.fuseArgs == ["-o", "debug"])
   #expect(res.options.gatewayArgs == ["--log-level=debug"])
   #expect(res.options.plaintextPrefixes == ["/Users/me/Downloads"])
+}
+
+@Test func parseActionsAndMetaFlags() throws {
+  let res = try CLI.parse(["--mount", "--config", "/tmp/ocprotectfs.json", "--version"])
+  #expect(res.action == .mount)
+  #expect(res.configPath == "/tmp/ocprotectfs.json")
+  #expect(res.showVersion == true)
+}
+
+@Test func conflictingActionsErrors() {
+  #expect(throws: CLIError.conflictingActions(["--mount", "--status"])) {
+    _ = try CLI.parse(["--mount", "--status"])
+  }
 }
 
 @Test func unknownFlagErrors() {
