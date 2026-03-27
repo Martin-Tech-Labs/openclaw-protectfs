@@ -6,32 +6,16 @@
 - Bookkeeping: this repo heartbeat/loop cron can be disabled unless you want post-initial verification work (see below).
 
 ## Current focus
-### Quickstart one-command script (#88)
-- **Current item:** #88 (Quickstart: one-command setup script)
-- **PR:** #116
-- **Status:** In Review
-- **Review rounds:** 1
 
-### Swift supervisor rewrite (#86) — Phase 1 (scaffold)
-- **Current item:** #86 (Rewrite supervisor as native Swift executable)
-- **Phase issue:** #112
-- **PR:** #115
-- **Status:** In Review
-- **Review rounds:** 1
-
-Follow-ups (tracked as separate issues):
-- #113 (process lifecycle + liveness socket)
-- #114 (Keychain KEK management + ACL pinning)
-
-### Swift rewrite (#87) — Phase 1 in review
-- **Current item:** #107 (Swift FUSE package + minimal mount skeleton)
-- **PR:** #111
-- **Status:** In Review
+### Swift rewrite (#87) — Phase 2
+- **Current item:** #108 (#87 Phase 2: Implement core FUSE ops + passthrough)
+- **PR:** (not opened yet)
+- **Status:** In Progress
 - **Review rounds:** 0
 
-Notes:
-- This PR is intentionally non-functional; it must not use closing keywords.
-- Follow-ups tracked in #108 and #109.
+Context:
+- Phase 1 (#107) provides the Swift package skeleton.
+- Phase 3 (#109) will port crypto/policy/authz enforcement.
 
 ### Post-PLAN 19 verification (confidence pass)
 Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
