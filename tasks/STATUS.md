@@ -6,11 +6,8 @@
 - Bookkeeping: this repo heartbeat/loop cron can be disabled unless you want post-initial verification work (see below).
 
 ## Current focus
-### Quickstart one-command script (#88)
-- **Current item:** #88 (Quickstart: one-command setup script)
-- **PR:** #116
-- **Status:** In Review
-- **Review rounds:** 1
+
+(Next item not picked yet in this run.)
 
 ### Swift supervisor rewrite (#86) — Phase 1 (scaffold)
 - **Current item:** #86 (Rewrite supervisor as native Swift executable)
@@ -50,6 +47,7 @@ Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
   - [ ] Operator notes in README updated if any surprises.
 
 ## Recently completed
+- **#88 Quickstart one-command script** — merged as PR **#116** (scripts/quickstart.sh + README snippet + self-validating KEK check + randomized smoke token).
 - **PLAN 21-testability-di-keychain** — formalized Keychain/KEK DI points (explicit keychain instance + injectable `getOrCreateKey32`) and added test coverage for the DI boundary.
 - **PLAN 20-repo-layout-tests** — repo layout already in src/ + test/ + acceptance/ (wrapper + fusefs); README updated to document layout + test commands.
 - **PLAN 19-keychain-kek-e2e** — merged as PR **#49** (Keychain KEK + FD handoff; no env secret).
