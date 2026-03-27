@@ -6,6 +6,12 @@
 - Bookkeeping: this repo heartbeat/loop cron can be disabled unless you want post-initial verification work (see below).
 
 ## Current focus
+### Quickstart one-command script (#88)
+- **Current item:** #88 (Quickstart: one-command setup script)
+- **PR:** (pending)
+- **Status:** In Progress
+- **Review rounds:** 0
+
 ### Swift supervisor rewrite (#86) — Phase 1 (scaffold)
 - **Current item:** #86 (Rewrite supervisor as native Swift executable)
 - **Phase issue:** #112

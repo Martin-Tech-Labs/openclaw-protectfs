@@ -22,6 +22,12 @@ cd openclaw-protectfs
 npm install
 ```
 
+Optional: one-command quickstart smoke test (Refs #88):
+
+```bash
+bash scripts/quickstart.sh
+```
+
 3) Start the supervisor.
 
 The supervisor **supervises two long-running processes**:
