@@ -10,7 +10,7 @@
 - **Current item:** #88 (Quickstart: one-command setup script)
 - **PR:** #116
 - **Status:** In Review
-- **Review rounds:** 0
+- **Review rounds:** 1
 
 ### Swift supervisor rewrite (#86) — Phase 1 (scaffold)
 - **Current item:** #86 (Rewrite supervisor as native Swift executable)
