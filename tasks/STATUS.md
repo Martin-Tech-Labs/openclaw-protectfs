@@ -10,13 +10,10 @@
 ### Swift rewrite (#87) — Phase 3
 - **Current item:** #109 (#87 Phase 3: Port crypto + policy/authz enforcement to Swift)
 - **Status:** In Progress
-- **Branch:** issue-109-swift-crypto-interop
-
-Progress this round:
-- Added Swift CryptoKit implementation of the v1 encrypted file format.
-- Added Swift<->Node interop tests to ensure on-disk format compatibility.
 
 Recently:
+- PR #122 merged: Swift crypto v1 format + Node<->Swift interop tests (Refs #109).
+- Follow-ups filed for the remaining Phase 3 work: #119 / #120 / #121.
 - Phase 2 (#108) merged as PR #118 on 2026-03-28 (CI green).
 
 Context:
