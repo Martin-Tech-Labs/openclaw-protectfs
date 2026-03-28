@@ -42,6 +42,7 @@ Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
   - [ ] Operator notes in README updated if any surprises.
 
 ## Recently completed
+- **#88 Quickstart one-command script** — merged as PR **#116** (scripts/quickstart.sh + README snippet + self-validating KEK check + randomized smoke token).
 - **PLAN 21-testability-di-keychain** — formalized Keychain/KEK DI points (explicit keychain instance + injectable `getOrCreateKey32`) and added test coverage for the DI boundary.
 - **PLAN 20-repo-layout-tests** — repo layout already in src/ + test/ + acceptance/ (wrapper + fusefs); README updated to document layout + test commands.
 - **PLAN 19-keychain-kek-e2e** — merged as PR **#49** (Keychain KEK + FD handoff; no env secret).
