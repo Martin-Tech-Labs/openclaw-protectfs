@@ -25,7 +25,7 @@ function buildHelper() {
 
   execFileSync('swiftc', [
     '-O',
-    path.join(fuseSwift, 'Sources', 'OcProtectFsFuse', 'Policy.swift'),
+    path.join(fuseSwift, 'Sources', 'OcProtectFsFuseCore', 'Policy.swift'),
     path.join(fuseSwift, 'scripts', 'policy-interop', 'main.swift'),
     '-o',
     bin,

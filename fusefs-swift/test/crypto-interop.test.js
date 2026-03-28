@@ -29,7 +29,7 @@ test('fusefs-swift: crypto v1 format interop (Swift<->Node)', { skip: process.pl
 
   execFileSync('swiftc', [
     '-O',
-    path.join(fuseSwift, 'Sources', 'OcProtectFsFuse', 'CryptoV1.swift'),
+    path.join(fuseSwift, 'Sources', 'OcProtectFsFuseCore', 'CryptoV1.swift'),
     path.join(fuseSwift, 'scripts', 'crypto-interop', 'main.swift'),
     '-o',
     bin,

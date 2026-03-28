@@ -2,7 +2,7 @@ import Foundation
 
 // Phase 3 (Issue #109): core authorizeOp parity with fusefs/src/core.js.
 
-enum Ops: String {
+public enum Ops: String {
   case read
   case write
   case create
@@ -17,22 +17,22 @@ enum Ops: String {
   case statfs
 }
 
-struct AuthzResult {
-  let ok: Bool
-  let code: Int32 // POSIX errno when !ok
-  let reason: String
+public struct AuthzResult {
+  public let ok: Bool
+  public let code: Int32 // POSIX errno when !ok
+  public let reason: String
 
-  static func allow(_ reason: String) -> AuthzResult {
+  public static func allow(_ reason: String) -> AuthzResult {
     AuthzResult(ok: true, code: 0, reason: reason)
   }
 
-  static func deny(_ code: Int32, _ reason: String) -> AuthzResult {
+  public static func deny(_ code: Int32, _ reason: String) -> AuthzResult {
     AuthzResult(ok: false, code: code, reason: reason)
   }
 }
 
-enum Core {
-  static func authorizeOp(
+public enum Core {
+  public static func authorizeOp(
     op: Ops,
     rel: String,
     plaintextPrefixes: [String]? = nil,

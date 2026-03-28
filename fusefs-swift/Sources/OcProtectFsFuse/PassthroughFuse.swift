@@ -1,4 +1,5 @@
 import CFuse
+import OcProtectFsFuseCore
 import Foundation
 import Darwin
 

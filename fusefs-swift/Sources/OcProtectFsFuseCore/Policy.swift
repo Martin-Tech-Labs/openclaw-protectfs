@@ -3,7 +3,7 @@ import Foundation
 // Phase 3 (Issue #109): policy/path classification port.
 // Follow-up (Issue #119): Swift policy classifier parity with fusefs/src/policy.js.
 
-enum PolicyError: Error, CustomStringConvertible {
+public enum PolicyError: Error, CustomStringConvertible {
   case relMustBeString // placeholder for parity; only used by interop harness
   case backslashNotAllowed
   case nulNotAllowed
@@ -13,7 +13,7 @@ enum PolicyError: Error, CustomStringConvertible {
   case plaintextPrefixMustBeSingleSegment
   case invalidPlaintextPrefix
 
-  var description: String {
+  public var description: String {
     switch self {
       case .relMustBeString: return "rel must be a string"
       case .backslashNotAllowed: return "backslash not allowed in relative paths"
@@ -27,19 +27,19 @@ enum PolicyError: Error, CustomStringConvertible {
   }
 }
 
-struct PathClassification: Codable, Equatable {
-  let rel: String
-  let storage: String // "plaintext" | "encrypted"
-  let requiresGatewayAccessChecks: Bool
-  let reason: String
+public struct PathClassification: Codable, Equatable {
+  public let rel: String
+  public let storage: String // "plaintext" | "encrypted"
+  public let requiresGatewayAccessChecks: Bool
+  public let reason: String
 }
 
-enum Policy {
-  static let defaultPlaintextPrefixes: [String] = ["workspace"]
+public enum Policy {
+  public static let defaultPlaintextPrefixes: [String] = ["workspace"]
 
   /// Mirrors `path.posix.normalize` behavior used in JS, with traversal detection.
   /// - Returns: a normalized POSIX-like relative path ("." allowed).
-  static func assertSafeRelative(_ rel: String) throws -> String {
+  public static func assertSafeRelative(_ rel: String) throws -> String {
     if rel.isEmpty { return "." }
     if rel.contains("\\") { throw PolicyError.backslashNotAllowed }
     if rel.utf8.contains(0) { throw PolicyError.nulNotAllowed }
@@ -93,7 +93,7 @@ enum Policy {
     return stack.joined(separator: "/")
   }
 
-  static func normalizePlaintextPrefixes(_ prefixes: [String]?) throws -> [String]? {
+  public static func normalizePlaintextPrefixes(_ prefixes: [String]?) throws -> [String]? {
     guard let prefixes else { return nil }
 
     var out: [String] = []
@@ -120,7 +120,7 @@ enum Policy {
     return deduped
   }
 
-  static func parseEnvPlaintextPrefixes(env: [String: String] = ProcessInfo.processInfo.environment) throws -> [String]? {
+  public static func parseEnvPlaintextPrefixes(env: [String: String] = ProcessInfo.processInfo.environment) throws -> [String]? {
     guard let v = env["OCPROTECTFS_PLAINTEXT_PREFIXES"] else { return nil }
 
     let s = v.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -130,7 +130,7 @@ enum Policy {
     return try normalizePlaintextPrefixes(parts) ?? []
   }
 
-  static func getPlaintextPrefixes(plaintextPrefixes: [String]?, env: [String: String] = ProcessInfo.processInfo.environment) throws -> [String] {
+  public static func getPlaintextPrefixes(plaintextPrefixes: [String]?, env: [String: String] = ProcessInfo.processInfo.environment) throws -> [String] {
     if let fromOpts = try normalizePlaintextPrefixes(plaintextPrefixes) {
       return fromOpts
     }
@@ -140,7 +140,7 @@ enum Policy {
     return defaultPlaintextPrefixes
   }
 
-  static func isPlaintextPath(_ rel: String, plaintextPrefixes: [String]? = nil, env: [String: String] = ProcessInfo.processInfo.environment) throws -> Bool {
+  public static func isPlaintextPath(_ rel: String, plaintextPrefixes: [String]? = nil, env: [String: String] = ProcessInfo.processInfo.environment) throws -> Bool {
     let clean = try assertSafeRelative(rel)
     if clean == "." { return false }
     let first = clean.split(separator: "/", maxSplits: 1, omittingEmptySubsequences: true).first.map(String.init) ?? ""
@@ -148,7 +148,7 @@ enum Policy {
     return prefixes.contains(first)
   }
 
-  static func classifyPath(_ rel: String, plaintextPrefixes: [String]? = nil, env: [String: String] = ProcessInfo.processInfo.environment) throws -> PathClassification {
+  public static func classifyPath(_ rel: String, plaintextPrefixes: [String]? = nil, env: [String: String] = ProcessInfo.processInfo.environment) throws -> PathClassification {
     let clean = try assertSafeRelative(rel)
 
     if try isPlaintextPath(clean, plaintextPrefixes: plaintextPrefixes, env: env) {
