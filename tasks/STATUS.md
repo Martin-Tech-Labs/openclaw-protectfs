@@ -7,28 +7,18 @@
 
 ## Current focus
 
-(Next item not picked yet in this run.)
+### Swift rewrite (#87) — Phase 3
+- **Current item:** #109 (#87 Phase 3: Port crypto + policy/authz enforcement to Swift)
+- **Status:** In Progress
 
-### Swift supervisor rewrite (#86) — Phase 1 (scaffold)
-- **Current item:** #86 (Rewrite supervisor as native Swift executable)
-- **Phase issue:** #112
-- **PR:** #115
-- **Status:** In Review
-- **Review rounds:** 1
+Recently:
+- PR #122 merged: Swift crypto v1 format + Node<->Swift interop tests (Refs #109).
+- Follow-ups filed for the remaining Phase 3 work: #119 / #120 / #121.
+- Phase 2 (#108) merged as PR #118 on 2026-03-28 (CI green).
 
-Follow-ups (tracked as separate issues):
-- #113 (process lifecycle + liveness socket)
-- #114 (Keychain KEK management + ACL pinning)
-
-### Swift rewrite (#87) — Phase 1 in review
-- **Current item:** #107 (Swift FUSE package + minimal mount skeleton)
-- **PR:** #111
-- **Status:** In Review
-- **Review rounds:** 0
-
-Notes:
-- This PR is intentionally non-functional; it must not use closing keywords.
-- Follow-ups tracked in #108 and #109.
+Context:
+- Phase 1 (#107) provides the Swift package skeleton.
+- Phase 2 (#108) implements the core ops + passthrough.
 
 ### Post-PLAN 19 verification (confidence pass)
 Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.

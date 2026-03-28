@@ -10,8 +10,15 @@ let package = Package(
     .executable(name: "ocprotectfs-fuse", targets: ["OcProtectFsFuse"])
   ],
   targets: [
+    // System libfuse (macFUSE) headers + linker shim.
+    .systemLibrary(
+      name: "CFuse",
+      path: "Sources/CFuse"
+    ),
+
     .executableTarget(
       name: "OcProtectFsFuse",
+      dependencies: ["CFuse"],
       path: "Sources/OcProtectFsFuse"
     )
   ]

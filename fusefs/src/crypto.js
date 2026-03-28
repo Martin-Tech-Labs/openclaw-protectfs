@@ -57,6 +57,18 @@ function encodeEncryptedFileV1({ dek, plaintext }) {
   if (!Buffer.isBuffer(plaintext)) throw new Error('plaintext must be a Buffer');
 
   const nonce = crypto.randomBytes(Initial.NONCE_LEN);
+  return encodeEncryptedFileV1WithNonce({ dek, nonce, plaintext });
+}
+
+// Test/interop helper: deterministic encoding with a provided nonce.
+//
+// This is intentionally exported so the Swift rewrite can cross-check
+// on-disk format compatibility.
+function encodeEncryptedFileV1WithNonce({ dek, nonce, plaintext }) {
+  if (!Buffer.isBuffer(dek) || dek.length !== 32) throw new Error('dek must be 32 bytes');
+  if (!Buffer.isBuffer(nonce) || nonce.length !== Initial.NONCE_LEN) throw new Error('nonce must be 12 bytes');
+  if (!Buffer.isBuffer(plaintext)) throw new Error('plaintext must be a Buffer');
+
   const header = Buffer.concat([
     Initial.FILE_MAGIC,
     Buffer.from([Initial.FILE_VERSION, Initial.ALG_AES_256_GCM, Initial.NONCE_LEN]),
@@ -101,5 +113,6 @@ module.exports = {
   sealAes256Gcm,
   openAes256Gcm,
   encodeEncryptedFileV1,
+  encodeEncryptedFileV1WithNonce,
   decodeEncryptedFileV1,
 };
