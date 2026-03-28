@@ -1,5 +1,6 @@
 import CFuse
 import Foundation
+import Darwin
 
 private let toolName = "ocprotectfs-fuse"
 private let version = "0.0.0-dev"
@@ -8,6 +9,9 @@ struct Args {
   var backstore: String?
   var mountpoint: String?
   var foreground: Bool = true
+
+  // Phase 3: KEK is provided via an inherited anonymous pipe FD.
+  var kekFd: Int32? = nil
 
   var showHelp: Bool = false
   var showVersion: Bool = false
@@ -31,6 +35,12 @@ struct Args {
         i += 1
         if i < raw.count { mountpoint = raw[i] }
 
+      case "--kek-fd":
+        i += 1
+        if i < raw.count {
+          kekFd = Int32(raw[i])
+        }
+
       case "-f", "--foreground":
         foreground = true
 
@@ -46,14 +56,14 @@ struct Args {
 func printHelp() {
   print(
     """
-    \(toolName) (Swift, phase 2 passthrough)
+    \(toolName) (Swift)
 
     Usage:
-      \(toolName) --backstore <path> --mountpoint <path> [--foreground]
+      \(toolName) --backstore <path> --mountpoint <path> [--kek-fd <n>] [--foreground]
 
     Notes:
       - Phase 2 implements core FUSE ops and plaintext passthrough (Refs #108).
-      - Phase 3 will port crypto/policy/authz enforcement (Refs #109).
+      - Phase 3 implements crypto + policy/authz enforcement (Refs #109).
 
     Common macFUSE/libfuse flags:
       -f              Run in foreground
@@ -82,8 +92,41 @@ guard let backstore = args.backstore, let mountpoint = args.mountpoint else {
   exit(2)
 }
 
-PassthroughFuse.shared.configure(
-  backstoreRoot: (backstore as NSString).expandingTildeInPath
+func readKey32FromFd(_ fd: Int32) throws -> Data {
+  var buf = [UInt8](repeating: 0, count: 32)
+  var readTotal = 0
+
+  let total = buf.count
+  while readTotal < total {
+    let remaining = total - readTotal
+    let n: Int = buf.withUnsafeMutableBytes { raw in
+      let base = raw.baseAddress!.advanced(by: readTotal)
+      return Darwin.read(fd, base, remaining)
+    }
+
+    if n < 0 { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+    if n == 0 { break }
+    readTotal += n
+  }
+
+  if readTotal != 32 {
+    throw POSIXError(.EACCES)
+  }
+
+  return Data(buf)
+}
+
+let kek: Data?
+if let fd = args.kekFd {
+  // Wrapper passes KEK on fd 3 (see wrapper/src/run.js).
+  kek = try? readKey32FromFd(fd)
+} else {
+  kek = nil
+}
+
+ProtectFsFuse.shared.configure(
+  backstoreRoot: (backstore as NSString).expandingTildeInPath,
+  kek: kek
 )
 
 var ops = makeOperations()
