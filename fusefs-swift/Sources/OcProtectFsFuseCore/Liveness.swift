@@ -5,8 +5,8 @@ import Darwin
 // Contract (wrapper/src/run.js): a unix domain socket at $OCPROTECTFS_LIVENESS_SOCK
 // accepts connections and replies "OK\n".
 
-enum Liveness {
-  static func isGatewayAccessAllowed(env: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+public enum Liveness {
+  public static func isGatewayAccessAllowed(env: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
     guard let sock = env["OCPROTECTFS_LIVENESS_SOCK"], !sock.isEmpty else { return false }
 
     let fd = socket(AF_UNIX, SOCK_STREAM, 0)

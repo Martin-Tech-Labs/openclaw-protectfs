@@ -2,21 +2,21 @@ import Foundation
 
 // Phase 3 (Issue #109): encrypted file + DEK sidecar handling parity with fusefs/src/encrypted-file.js.
 
-enum EncryptedFile {
-  static func sidecarDekPath(_ realPath: String) -> String {
+public enum EncryptedFile {
+  public static func sidecarDekPath(_ realPath: String) -> String {
     "\(realPath).ocpfs.dek"
   }
 
-  struct EncryptedFileError: Error, CustomStringConvertible {
-    let description: String
-    let code: Int32
+  public struct EncryptedFileError: Error, CustomStringConvertible {
+    public let description: String
+    public let code: Int32
 
-    static func eacces(_ msg: String) -> EncryptedFileError {
+    public static func eacces(_ msg: String) -> EncryptedFileError {
       EncryptedFileError(description: msg, code: EACCES)
     }
   }
 
-  static func loadOrCreateDek(kek: Data, realPath: String, createIfMissing: Bool) throws -> Data {
+  public static func loadOrCreateDek(kek: Data, realPath: String, createIfMissing: Bool) throws -> Data {
     let dekPath = sidecarDekPath(realPath)
 
     do {
@@ -41,7 +41,7 @@ enum EncryptedFile {
     }
   }
 
-  static func readEncryptedFile(kek: Data, realPath: String, createIfMissing: Bool = false) throws -> (dek: Data, plaintext: Data) {
+  public static func readEncryptedFile(kek: Data, realPath: String, createIfMissing: Bool = false) throws -> (dek: Data, plaintext: Data) {
     let dek = try loadOrCreateDek(kek: kek, realPath: realPath, createIfMissing: createIfMissing)
 
     do {
@@ -56,7 +56,7 @@ enum EncryptedFile {
     }
   }
 
-  static func writeEncryptedFile(dek: Data, realPath: String, plaintext: Data) throws {
+  public static func writeEncryptedFile(dek: Data, realPath: String, plaintext: Data) throws {
     let blob = try OcfsCrypto.encodeEncryptedFileV1(dek: dek, plaintext: plaintext)
 
     let dir = (realPath as NSString).deletingLastPathComponent

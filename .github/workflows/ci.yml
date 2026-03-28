@@ -39,21 +39,16 @@ jobs:
           OCPROTECTFS_RUN_REAL_MOUNT_TESTS: "0"
         run: make test
 
-      - name: Swift (supervisor-swift tests; fusefs-swift build is opt-in)
+      - name: Swift (build + test)
         if: matrix.os == 'macos-latest'
+        env:
+          # fusefs-swift depends on macFUSE headers (fuse/fuse.h). GitHub-hosted runners
+          # cannot reliably install/enable them, so keep building the full FUSE executable
+          # opt-in. CI still builds the FUSE-independent core module.
+          OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT: "0"
         run: |
           swift --version
-
-          # fusefs-swift depends on macFUSE headers (fuse/fuse.h). GitHub-hosted runners
-          # cannot reliably install/enable them, so keep this compile step opt-in.
-          if [ "${OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT:-0}" = "1" ]; then
-            echo "OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT=1; building fusefs-swift"
-            (cd fusefs-swift && swift build)
-          else
-            echo "Skipping fusefs-swift build in CI (set OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT=1 to enable)"
-          fi
-
-          cd supervisor-swift && swift test
+          make swift-test
 
   # Branch protection expects a status check called exactly "basic".
   # Use a tiny gate job that depends on the full test matrix.
