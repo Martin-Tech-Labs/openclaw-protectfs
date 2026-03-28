@@ -10,6 +10,10 @@
 ### Swift rewrite (#87) — Phase 3
 - **Current item:** #109 (#87 Phase 3: Port crypto + policy/authz enforcement to Swift)
 - **Status:** In Progress
+- Review rounds: (none yet; no open PR)
+
+Next up:
+- #119 Swift policy classifier parity (normalize + plaintext-prefix classification) — implementing now
 
 Recently:
 - PR #122 merged: Swift crypto v1 format + Node<->Swift interop tests (Refs #109).
