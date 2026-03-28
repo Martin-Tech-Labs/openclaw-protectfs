@@ -9,8 +9,8 @@
 
 ### Swift rewrite (#87) — Phase 2
 - **Current item:** #108 (#87 Phase 2: Implement core FUSE ops + passthrough)
-- **PR:** (not opened yet)
-- **Status:** In Progress
+- **PR:** #118
+- **Status:** In Review
 - **Review rounds:** 0
 
 Context:
