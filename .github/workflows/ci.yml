@@ -39,21 +39,18 @@ jobs:
           OCPROTECTFS_RUN_REAL_MOUNT_TESTS: "0"
         run: make test
 
-      - name: Swift (supervisor-swift tests; fusefs-swift build only if FUSE headers exist)
+      - name: Swift (supervisor-swift tests; fusefs-swift build is opt-in)
         if: matrix.os == 'macos-latest'
         run: |
           swift --version
 
-          # GitHub-hosted macOS runners do not provide macFUSE headers (and cannot
-          # reliably install/enable kernel extensions non-interactively).
-          # So we always run supervisor-swift tests, but only build fusefs-swift
-          # when FUSE headers are present.
-
-          if [ -f "/usr/local/include/fuse/fuse.h" ] || [ -f "/opt/homebrew/include/fuse/fuse.h" ]; then
-            echo "Found fuse headers; building fusefs-swift"
+          # fusefs-swift depends on macFUSE headers (fuse/fuse.h). GitHub-hosted runners
+          # cannot reliably install/enable them, so keep this compile step opt-in.
+          if [ "${OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT:-0}" = "1" ]; then
+            echo "OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT=1; building fusefs-swift"
             (cd fusefs-swift && swift build)
           else
-            echo "No fuse headers found; skipping fusefs-swift build"
+            echo "Skipping fusefs-swift build in CI (set OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT=1 to enable)"
           fi
 
           cd supervisor-swift && swift test
