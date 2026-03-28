@@ -9,16 +9,17 @@
 
 ### Swift rewrite (#87) — Phase 3
 - **Current item:** #109 (#87 Phase 3: Port crypto + policy/authz enforcement to Swift)
-- **Status:** In Progress
-- Review rounds: 0 (PR open, not yet reviewed)
+- **Status:** Done (merged)
+- Review rounds: 1 (Joao approved)
 
 Current PRs:
-- PR #126: Swift FUSE: encrypted-at-rest ops + liveness-gated authz (Refs #109) — In Review (Joao requested)
+- (none)
 
 Recently:
+- PR #126 merged: Swift FUSE: encrypted-at-rest ops + liveness-gated authz (Refs #109). (Joao approved; CI green)
 - PR #124 merged: Swift policy classifier parity (Refs #119). (Joao approved; CI green)
 - PR #122 merged: Swift crypto v1 format + Node<->Swift interop tests (Refs #109).
-- Follow-ups filed for the remaining Phase 3 work: #119 / #120 / #121.
+- Follow-ups filed for remaining hardening/cleanup work: #119 / #120 / #121.
 - Phase 2 (#108) merged as PR #118 on 2026-03-28 (CI green).
 
 Context:
