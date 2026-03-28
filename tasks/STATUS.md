@@ -13,9 +13,10 @@
 - Review rounds: 0 (PR open, not yet reviewed)
 
 Current PRs:
-- PR #124: Swift policy classifier parity (Refs #119)
+- (none)
 
 Recently:
+- PR #124 merged: Swift policy classifier parity (Refs #119). (Joao approved; CI green)
 - PR #122 merged: Swift crypto v1 format + Node<->Swift interop tests (Refs #109).
 - Follow-ups filed for the remaining Phase 3 work: #119 / #120 / #121.
 - Phase 2 (#108) merged as PR #118 on 2026-03-28 (CI green).
