@@ -21,7 +21,20 @@ swift-build:
 	cd supervisor-swift && swift build
 
 # Note: fusefs-swift currently has no SwiftPM test target.
-# We at least run supervisor-swift tests, and compile fusefs-swift.
+# We always run supervisor-swift tests.
+# fusefs-swift depends on macFUSE headers (fuse/fuse.h), which are typically *not*
+# present on GitHub-hosted runners. So we only compile fusefs-swift when explicitly
+# enabled *and* headers are available.
 swift-test:
-	cd fusefs-swift && swift build
+	@if [ "${OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT:-0}" = "1" ]; then \
+		if [ -f /opt/homebrew/include/fuse/fuse.h ] || [ -f /usr/local/include/fuse/fuse.h ]; then \
+			echo "OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT=1; building fusefs-swift"; \
+			(cd fusefs-swift && swift build); \
+		else \
+			echo "OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT=1 but fuse headers not found; failing"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "Skipping fusefs-swift build (set OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT=1 to enable)"; \
+	fi
 	cd supervisor-swift && swift test
