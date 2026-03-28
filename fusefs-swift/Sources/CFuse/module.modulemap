@@ -1,0 +1,5 @@
+module CFuse [system] {
+  header "shim.h"
+  link "fuse"
+  export *
+}

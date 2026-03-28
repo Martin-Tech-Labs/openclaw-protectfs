@@ -1,50 +1,119 @@
+import CFuse
 import Foundation
 
-// Placeholder skeleton for Issue #87 / Phase 1 (Issue #107).
-//
-// Intentionally not wired into the supervisor yet.
-// This exists so we can iterate in Swift without breaking the Node implementation.
-
 private let toolName = "ocprotectfs-fuse"
-private let skeletonVersion = "0.0.0-skeleton"
+private let version = "0.0.0-dev"
 
 struct Args {
-  let raw: [String]
+  var backstore: String?
+  var mountpoint: String?
+  var foreground: Bool = true
 
-  func has(_ flag: String) -> Bool { raw.contains(flag) }
+  var showHelp: Bool = false
+  var showVersion: Bool = false
+
+  init(raw: [String]) {
+    var i = 0
+    while i < raw.count {
+      let a = raw[i]
+      switch a {
+      case "-h", "--help":
+        showHelp = true
+
+      case "--version":
+        showVersion = true
+
+      case "--backstore":
+        i += 1
+        if i < raw.count { backstore = raw[i] }
+
+      case "--mountpoint":
+        i += 1
+        if i < raw.count { mountpoint = raw[i] }
+
+      case "-f", "--foreground":
+        foreground = true
+
+      default:
+        // Let libfuse parse/handle unknown flags (e.g., -o options) by passing through.
+        break
+      }
+      i += 1
+    }
+  }
 }
 
 func printHelp() {
   print(
     """
-    \(toolName) (Swift skeleton)
+    \(toolName) (Swift, phase 2 passthrough)
 
     Usage:
-      \(toolName) [--help|-h] [--version]
+      \(toolName) --backstore <path> --mountpoint <path> [--foreground]
 
     Notes:
-      - This is a non-functional placeholder to unblock Swift iteration.
-      - Refs #107 (phase 1) / Refs #87 (parent).
+      - Phase 2 implements core FUSE ops and plaintext passthrough (Refs #108).
+      - Phase 3 will port crypto/policy/authz enforcement (Refs #109).
 
-    Exit codes:
-      0  success (help/version)
-      2  not implemented
+    Common macFUSE/libfuse flags:
+      -f              Run in foreground
+      -o <opts>       Mount options (passed through to libfuse)
+
     """
   )
 }
 
-let args = Args(raw: Array(CommandLine.arguments.dropFirst()))
+let argv = Array(CommandLine.arguments)
+let args = Args(raw: Array(argv.dropFirst()))
 
-if args.has("--help") || args.has("-h") {
+if args.showHelp {
   printHelp()
   exit(0)
 }
 
-if args.has("--version") {
-  print("\(toolName) \(skeletonVersion)")
+if args.showVersion {
+  print("\(toolName) \(version)")
   exit(0)
 }
 
-printHelp()
-fputs("\nERROR: \(toolName) Swift rewrite is not implemented yet (Refs #87).\n", stderr)
-exit(2)
+guard let backstore = args.backstore, let mountpoint = args.mountpoint else {
+  printHelp()
+  fputs("\nERROR: --backstore and --mountpoint are required.\n", stderr)
+  exit(2)
+}
+
+PassthroughFuse.shared.configure(
+  backstoreRoot: (backstore as NSString).expandingTildeInPath
+)
+
+var ops = makeOperations()
+
+// Build argv for fuse_main_real. We pass through user-provided args and
+// *also* ensure the mountpoint is present.
+//
+// libfuse expects:
+//   argv[0] program
+//   argv[1...] flags, mountpoint, -o opts, etc.
+var fuseArgv: [String] = [argv.first ?? toolName]
+
+// Preserve original args, but ensure mountpoint is included.
+var hasMountpoint = false
+for a in argv.dropFirst() {
+  if a == mountpoint { hasMountpoint = true }
+  fuseArgv.append(a)
+}
+if !hasMountpoint {
+  fuseArgv.append(mountpoint)
+}
+
+let cArgs: [UnsafeMutablePointer<CChar>?] = fuseArgv.map { strdup($0) }
+
+defer {
+  for p in cArgs { free(p) }
+}
+
+let argc = Int32(cArgs.count)
+var argvC = cArgs
+
+let res = fuse_main_real(argc, &argvC, &ops, MemoryLayout<fuse_operations>.size, nil)
+exit(res)
