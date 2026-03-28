@@ -39,11 +39,23 @@ jobs:
           OCPROTECTFS_RUN_REAL_MOUNT_TESTS: "0"
         run: make test
 
-      - name: Swift (fusefs-swift + supervisor-swift build; supervisor-swift tests)
+      - name: Swift (supervisor-swift tests; fusefs-swift build only if FUSE headers exist)
         if: matrix.os == 'macos-latest'
         run: |
           swift --version
-          make swift-build
+
+          # GitHub-hosted macOS runners do not provide macFUSE headers (and cannot
+          # reliably install/enable kernel extensions non-interactively).
+          # So we always run supervisor-swift tests, but only build fusefs-swift
+          # when FUSE headers are present.
+
+          if [ -f "/usr/local/include/fuse/fuse.h" ] || [ -f "/opt/homebrew/include/fuse/fuse.h" ]; then
+            echo "Found fuse headers; building fusefs-swift"
+            (cd fusefs-swift && swift build)
+          else
+            echo "No fuse headers found; skipping fusefs-swift build"
+          fi
+
           cd supervisor-swift && swift test
 
   # Branch protection expects a status check called exactly "basic".
