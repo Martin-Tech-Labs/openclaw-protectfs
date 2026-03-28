@@ -7,24 +7,21 @@
 
 ## Current focus
 
-### Swift rewrite (#87) — Phase 3
-- **Current item:** #109 (#87 Phase 3: Port crypto + policy/authz enforcement to Swift)
-- **Status:** Done (merged)
-- Review rounds: 1 (Joao approved)
+### Swift rewrite (#87)
+- **Current item:** #87 (Swift FUSE): keep Swift components building in CI
+- **Status:** In Progress
+- Review rounds: 0
 
 Current PRs:
-- (none)
+- PR #130: fusefs-swift: factor core module so CI can compile without macFUSE
 
 Recently:
-- PR #126 merged: Swift FUSE: encrypted-at-rest ops + liveness-gated authz (Refs #109). (Joao approved; CI green)
-- PR #124 merged: Swift policy classifier parity (Refs #119). (Joao approved; CI green)
-- PR #122 merged: Swift crypto v1 format + Node<->Swift interop tests (Refs #109).
-- Follow-ups filed for remaining hardening/cleanup work: #119 / #120 / #121.
-- Phase 2 (#108) merged as PR #118 on 2026-03-28 (CI green).
+- PR #126 merged: Swift FUSE: encrypted-at-rest ops + liveness-gated authz (Refs #109).
+- Phase 1-3 sub-issues (#107/#108/#109) are marked Done in the project.
 
-Context:
-- Phase 1 (#107) provides the Swift package skeleton.
-- Phase 2 (#108) implements the core ops + passthrough.
+Next:
+- Add CI build coverage for `fusefs-swift` (SwiftPM compile) alongside existing `supervisor-swift` tests. (DONE: core module compiled in CI; executable build still opt-in when macFUSE headers are present.)
+- Follow-up: add a SwiftPM test target for `fusefs-swift` once its internal logic is factored into testable modules.
 
 ### Post-PLAN 19 verification (confidence pass)
 Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
