@@ -13,7 +13,7 @@
 - Review rounds: 0 (PR open, not yet reviewed)
 
 Current PRs:
-- (none)
+- PR #126: Swift FUSE: encrypted-at-rest ops + liveness-gated authz (Refs #109) — In Review (Joao requested)
 
 Recently:
 - PR #124 merged: Swift policy classifier parity (Refs #119). (Joao approved; CI green)
