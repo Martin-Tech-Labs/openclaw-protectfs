@@ -7,15 +7,21 @@
 
 ## Current focus
 
-### Swift rewrite (#87) — Phase 2
-- **Current item:** #108 (#87 Phase 2: Implement core FUSE ops + passthrough)
-- **PR:** #118
-- **Status:** In Review
-- **Review rounds:** 0
+### Swift rewrite (#87) — Phase 3
+- **Current item:** #109 (#87 Phase 3: Port crypto + policy/authz enforcement to Swift)
+- **Status:** In Progress
+- **Branch:** issue-109-swift-crypto-interop
+
+Progress this round:
+- Added Swift CryptoKit implementation of the v1 encrypted file format.
+- Added Swift<->Node interop tests to ensure on-disk format compatibility.
+
+Recently:
+- Phase 2 (#108) merged as PR #118 on 2026-03-28 (CI green).
 
 Context:
 - Phase 1 (#107) provides the Swift package skeleton.
-- Phase 3 (#109) will port crypto/policy/authz enforcement.
+- Phase 2 (#108) implements the core ops + passthrough.
 
 ### Post-PLAN 19 verification (confidence pass)
 Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
