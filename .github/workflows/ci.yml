@@ -39,12 +39,11 @@ jobs:
           OCPROTECTFS_RUN_REAL_MOUNT_TESTS: "0"
         run: make test
 
-      - name: Swift supervisor (build + test)
+      - name: Swift (build + test)
         if: matrix.os == 'macos-latest'
         run: |
           swift --version
-          cd supervisor-swift
-          swift test
+          make swift-test
 
   # Branch protection expects a status check called exactly "basic".
   # Use a tiny gate job that depends on the full test matrix.
