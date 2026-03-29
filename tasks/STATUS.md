@@ -7,26 +7,27 @@
 
 ## Current focus
 
-### Swift rewrite (#87)
-- **Current item:** #87 (Swift FUSE): incremental parity + wrapper integration hooks
+### Uninstall/rollback helper (#89)
+- **Current item:** #89 (rollback script + docs)
 - **Status:** In Progress
 - Review rounds (next PR): 0
 
 Current PRs:
 - (none)
 
+Next (after #89):
+
+### Swift rewrite (#87)
+- Incremental parity + wrapper integration hooks (project tracks this at a higher level).
+
 Recently merged:
 - PR #132: fusefs-swift: test crypto + DEK format parity
 - PR #131: fusefs-swift: add SwiftPM unit tests for core policy
 - PR #130: fusefs-swift: factor core module so CI can compile without macFUSE
 
-Recently:
-- PR #126 merged: Swift FUSE: encrypted-at-rest ops + liveness-gated authz (Refs #109).
+Notes:
 - Phase 1-3 sub-issues (#107/#108/#109) are marked Done in the project.
-
-Next:
-- Add CI build coverage for `fusefs-swift` (SwiftPM compile) alongside existing `supervisor-swift` tests. (DONE: core module compiled in CI; executable build still opt-in when macFUSE headers are present.)
-- Follow-up: add a SwiftPM test target for `fusefs-swift` once its internal logic is factored into testable modules.
+- CI compile coverage for the `fusefs-swift` core module is in place; executable build remains opt-in when macFUSE headers are present.
 
 ### Post-PLAN 19 verification (confidence pass)
 Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.

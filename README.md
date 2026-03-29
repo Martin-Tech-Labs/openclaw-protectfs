@@ -346,11 +346,23 @@ Real deployment:
 ## Safety / rollback
 
 To stop and roll back:
+
 1) Stop the supervisor process (SIGINT / SIGTERM).
-2) Ensure the mount is unmounted (`umount ~/.openclaw` or the supervisor's best-effort unmount).
-3) If you need to restore the original directory layout:
-   - move `~/.openclaw` aside
-   - move `~/.openclaw.real` back to `~/.openclaw`
+2) Roll back using the helper script (recommended):
+
+```bash
+bash scripts/rollback.sh --restore-layout
+```
+
+Optional: if you want a *plaintext export* of the protected tree before unmounting (i.e., a full “decrypt” of the view that the FUSE overlay exposes):
+
+```bash
+bash scripts/rollback.sh --decrypt-to "$HOME/openclaw-plaintext-export" --restore-layout
+```
+
+Notes / safety:
+- The rollback script is intentionally conservative: it refuses unsafe paths, refuses to restore layout while the mount is active, and prompts before any destructive moves.
+- If anything looks wrong, stop and unmount manually (`umount ~/.openclaw`) before attempting directory moves.
 
 ## Contributing
 - Canonical plan: `tasks/PLAN.md`
