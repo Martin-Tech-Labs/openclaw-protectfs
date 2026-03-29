@@ -638,6 +638,26 @@ func ocpfs_statfs(_ path: UnsafePointer<CChar>?, _ stbuf: UnsafeMutablePointer<s
   }, { _ in 0 })
 }
 
+private var didPrintReady = false
+
+@_cdecl("ocpfs_init")
+func ocpfs_init(_ conn: UnsafeMutablePointer<fuse_conn_info>?) -> UnsafeMutableRawPointer? {
+  _ = conn
+
+  // Contract with wrapper/launcher: emit a single line "READY" only after a
+  // successful mount.
+  //
+  // This is best-effort: if stdout is not available, we still want the mount
+  // to proceed.
+  if !didPrintReady {
+    didPrintReady = true
+    fputs("READY\n", stdout)
+    fflush(stdout)
+  }
+
+  return nil
+}
+
 func makeOperations() -> fuse_operations {
   var ops = fuse_operations()
   ops.getattr = ocpfs_getattr
@@ -659,5 +679,6 @@ func makeOperations() -> fuse_operations {
   ops.chown = ocpfs_chown
   ops.utimens = ocpfs_utimens
   ops.statfs = ocpfs_statfs
+  ops.init = ocpfs_init
   return ops
 }

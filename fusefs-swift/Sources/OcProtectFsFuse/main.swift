@@ -64,6 +64,7 @@ func printHelp() {
     Notes:
       - Phase 2 implements core FUSE ops and plaintext passthrough (Refs #108).
       - Phase 3 implements crypto + policy/authz enforcement (Refs #109).
+      - On successful mount, prints a single line: "READY" (used by wrapper for fail-closed bring-up).
 
     Common macFUSE/libfuse flags:
       -f              Run in foreground
