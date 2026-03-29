@@ -14,7 +14,7 @@
 
 Current PRs:
 - PR #131: fusefs-swift: add SwiftPM unit tests for core policy
-  - Latest update: fix macOS CI by forcing Swift Testing and avoiding building the macFUSE-dependent FUSE target
+  - Latest update: fix macOS CI by making FUSE daemon targets/products opt-in in Package.swift (env-gated) so `swift test` doesn’t link libfuse on runners
   - Awaiting: CI green + Joao review
 
 Recently:
