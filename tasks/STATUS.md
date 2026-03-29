@@ -8,16 +8,17 @@
 ## Current focus
 
 ### Swift rewrite (#87)
-- **Current item:** #87 (Swift FUSE): keep Swift components building in CI
-- **Status:** In Review (PR #131)
-- Review rounds: 1
+- **Current item:** #87 (Swift FUSE): keep Swift components building in CI + add more core unit coverage
+- **Status:** In Review (PR #132)
+- Review rounds: 0
 
 Current PRs:
-- PR #131: fusefs-swift: add SwiftPM unit tests for core policy
-  - Latest update: fix macOS CI by making FUSE daemon targets/products opt-in in Package.swift (env-gated) so `swift test` doesn’t link libfuse on runners
+- PR #132: fusefs-swift: test crypto + DEK format parity
+  - Adds unit tests for CryptoV1 (encrypted file format v1) + DekStoreV1 (wrapped DEK v1)
   - Awaiting: CI green + Joao review
 
 Recently:
+- PR #131 merged: fusefs-swift: add SwiftPM unit tests for core policy
 - PR #130 merged: fusefs-swift: factor core module so CI can compile without macFUSE
 
 Recently:
