@@ -7,17 +7,15 @@
 
 ## Current focus
 
-### Uninstall/rollback helper (#89)
-- **Current item:** #89 (rollback script + docs)
+### Swift rewrite (#87)
+- **Current item:** #87 (Swift FUSE daemon rewrite / migration)
 - **Status:** In Progress
 - Review rounds (next PR): 0
 
 Current PRs:
-- (none)
+- #135: fusefs: add --impl swift delegator (Refs #87)
 
-Next (after #89):
-
-### Swift rewrite (#87)
+Notes:
 - Incremental parity + wrapper integration hooks (project tracks this at a higher level).
 
 Recently merged:
