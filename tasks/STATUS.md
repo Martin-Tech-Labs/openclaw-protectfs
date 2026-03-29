@@ -2,7 +2,7 @@
 
 ## Initial
 - **Initial: COMPLETE** (baseline implementation + tests + operator docs).
-- Last updated: 2026-03-25 (bookkeeping)
+- Last updated: 2026-03-29 (bookkeeping)
 - Bookkeeping: this repo heartbeat/loop cron can be disabled unless you want post-initial verification work (see below).
 
 ## Current focus
@@ -13,12 +13,15 @@
 - Review rounds (next PR): 0
 
 Current PRs:
-- #140: fusefs-swift: clear encrypted-handle dirty flag after flush (Refs #87)
+- (none)
 
 Notes:
 - Incremental parity + wrapper integration hooks (project tracks this at a higher level).
 
 Recently merged:
+- PR #140: fusefs-swift: clear encrypted-handle dirty flag after flush (Refs #87)
+- PR #139: fusefs-swift: flush open handles on FUSE destroy
+- PR #136: fusefs-swift: accept --plaintext-prefix in swift daemon (Refs #87)
 - PR #135: fusefs: add --impl swift delegator (Refs #87)
 - PR #132: fusefs-swift: test crypto + DEK format parity
 - PR #131: fusefs-swift: add SwiftPM unit tests for core policy
