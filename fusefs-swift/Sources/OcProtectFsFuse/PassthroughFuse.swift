@@ -679,6 +679,6 @@ func makeOperations() -> fuse_operations {
   ops.chown = ocpfs_chown
   ops.utimens = ocpfs_utimens
   ops.statfs = ocpfs_statfs
-  ops.init = ocpfs_init
+  ops.`init` = ocpfs_init
   return ops
 }

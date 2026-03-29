@@ -13,42 +13,58 @@ struct Args {
   // Phase 3: KEK is provided via an inherited anonymous pipe FD.
   var kekFd: Int32? = nil
 
+  // Keep CLI parity with the Node launcher: allow repeated plaintext prefixes.
+  // (These are applied by setting OCPROTECTFS_PLAINTEXT_PREFIXES for policy.)
+  var plaintextPrefixes: [String] = []
+
   var showHelp: Bool = false
   var showVersion: Bool = false
+  var parseError: String? = nil
 
   init(raw: [String]) {
     var i = 0
     while i < raw.count {
       let a = raw[i]
+
       switch a {
       case "-h", "--help":
         showHelp = true
+        i += 1
 
       case "--version":
         showVersion = true
+        i += 1
 
       case "--backstore":
-        i += 1
-        if i < raw.count { backstore = raw[i] }
+        guard i + 1 < raw.count else { parseError = "missing value for --backstore"; return }
+        backstore = raw[i + 1]
+        i += 2
 
       case "--mountpoint":
-        i += 1
-        if i < raw.count { mountpoint = raw[i] }
+        guard i + 1 < raw.count else { parseError = "missing value for --mountpoint"; return }
+        mountpoint = raw[i + 1]
+        i += 2
 
       case "--kek-fd":
-        i += 1
-        if i < raw.count {
-          kekFd = Int32(raw[i])
-        }
+        guard i + 1 < raw.count else { parseError = "missing value for --kek-fd"; return }
+        let v = raw[i + 1]
+        guard let n = Int32(v), n >= 0 else { parseError = "--kek-fd must be a non-negative integer"; return }
+        kekFd = n
+        i += 2
+
+      case "--plaintext-prefix":
+        guard i + 1 < raw.count else { parseError = "missing value for --plaintext-prefix"; return }
+        plaintextPrefixes.append(raw[i + 1])
+        i += 2
 
       case "-f", "--foreground":
         foreground = true
+        i += 1
 
       default:
         // Let libfuse parse/handle unknown flags (e.g., -o options) by passing through.
-        break
+        i += 1
       }
-      i += 1
     }
   }
 }
@@ -59,7 +75,7 @@ func printHelp() {
     \(toolName) (Swift)
 
     Usage:
-      \(toolName) --backstore <path> --mountpoint <path> [--kek-fd <n>] [--foreground]
+      \(toolName) --backstore <path> --mountpoint <path> [--kek-fd <n>] [--plaintext-prefix <p>]... [--foreground]
 
     Notes:
       - Phase 2 implements core FUSE ops and plaintext passthrough (Refs #108).
@@ -85,6 +101,12 @@ if args.showHelp {
 if args.showVersion {
   print("\(toolName) \(version)")
   exit(0)
+}
+
+if let err = args.parseError {
+  printHelp()
+  fputs("\nERROR: \(err)\n", stderr)
+  exit(2)
 }
 
 guard let backstore = args.backstore, let mountpoint = args.mountpoint else {
@@ -125,9 +147,15 @@ if let fd = args.kekFd {
   kek = nil
 }
 
+var env = ProcessInfo.processInfo.environment
+if !args.plaintextPrefixes.isEmpty {
+  env["OCPROTECTFS_PLAINTEXT_PREFIXES"] = args.plaintextPrefixes.joined(separator: ",")
+}
+
 ProtectFsFuse.shared.configure(
   backstoreRoot: (backstore as NSString).expandingTildeInPath,
-  kek: kek
+  kek: kek,
+  env: env
 )
 
 var ops = makeOperations()
