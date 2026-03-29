@@ -9,11 +9,11 @@
 
 ### Swift rewrite (#87)
 - **Current item:** #87 (Swift FUSE daemon rewrite / migration)
-- **Status:** In Progress
+- **Status:** In Review
 - Review rounds (next PR): 0
 
 Current PRs:
-- #141: docs: prefer Swift FUSE daemon in README (Refs #87)
+- #142: fusefs: make Swift FUSE daemon default on macOS (Closes #87)
 
 Notes:
 - Incremental parity + wrapper integration hooks (project tracks this at a higher level).
