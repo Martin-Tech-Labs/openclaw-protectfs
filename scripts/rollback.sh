@@ -148,9 +148,10 @@ copy_plaintext_view() {
 
   mkdir -p "$dest"
 
-  # Prefer rsync when available (preserves perms, symlinks, etc.).
+  # Prefer rsync when available.
   if command -v rsync >/dev/null 2>&1; then
-    rsync -aHAX --numeric-ids "$mp/" "$dest/"
+    # Keep flags portable across macOS/Linux (avoid GNU-only options).
+    rsync -a "$mp/" "$dest/"
   else
     # macOS cp supports -a (archive). This is best-effort.
     cp -a "$mp/." "$dest/"
