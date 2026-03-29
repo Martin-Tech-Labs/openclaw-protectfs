@@ -9,11 +9,16 @@
 
 ### Swift rewrite (#87)
 - **Current item:** #87 (Swift FUSE): keep Swift components building in CI
-- **Status:** In Progress
-- Review rounds: 0
+- **Status:** In Review (PR #131)
+- Review rounds: 1
 
 Current PRs:
-- PR #130: fusefs-swift: factor core module so CI can compile without macFUSE
+- PR #131: fusefs-swift: add SwiftPM unit tests for core policy
+  - Latest update: fix macOS CI by making FUSE daemon targets/products opt-in in Package.swift (env-gated) so `swift test` doesn’t link libfuse on runners
+  - Awaiting: CI green + Joao review
+
+Recently:
+- PR #130 merged: fusefs-swift: factor core module so CI can compile without macFUSE
 
 Recently:
 - PR #126 merged: Swift FUSE: encrypted-at-rest ops + liveness-gated authz (Refs #109).
