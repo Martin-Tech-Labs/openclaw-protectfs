@@ -13,7 +13,7 @@
 - Review rounds (next PR): 0
 
 Current PRs:
-- #139: fusefs-swift: flush open handles on FUSE destroy (Refs #87)
+- #140: fusefs-swift: clear encrypted-handle dirty flag after flush (Refs #87)
 
 Notes:
 - Incremental parity + wrapper integration hooks (project tracks this at a higher level).
