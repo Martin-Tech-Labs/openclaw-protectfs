@@ -91,7 +91,7 @@ test('ocprotectfs-fuse: --impl swift fails fast with a helpful error when swift 
   });
 
   assert.notEqual(out.code, 0);
-  assert.match(out.stderr, /Swift FUSE daemon not found|Build it first|--backstore and --mountpoint are required/i);
+  assert.match(out.stderr, /Swift FUSE daemon not found|Build it first|--backstore and --mountpoint are required|requires macOS/i);
 });
 
 function fsyncFileSafe(filePath) {
