@@ -91,7 +91,7 @@ final class ProtectFsFuse {
           _ = close(fd)
         case .encrypted:
           // Best-effort: ignore flush errors during shutdown.
-          try? flushEncryptedHandle(h)
+          _ = try? flushEncryptedHandle(h)
       }
     }
   }
@@ -139,10 +139,11 @@ final class ProtectFsFuse {
     return .encrypted(real: real, dek: dek, buf: buf, flags: flags, dirty: truncated)
   }
 
-  private func flushEncryptedHandle(_ h: Handle) throws {
-    guard case let .encrypted(real, dek, buf, _, dirty) = h else { return }
-    if !dirty { return }
+  private func flushEncryptedHandle(_ h: Handle) throws -> Handle {
+    guard case let .encrypted(real, dek, buf, flags, dirty) = h else { return h }
+    if !dirty { return h }
     try EncryptedFile.writeEncryptedFile(dek: dek, realPath: real, plaintext: buf)
+    return .encrypted(real: real, dek: dek, buf: buf, flags: flags, dirty: false)
   }
 
   // MARK: - Ops
@@ -240,7 +241,7 @@ final class ProtectFsFuse {
         _ = close(fd)
 
       case .encrypted:
-        try flushEncryptedHandle(h)
+        _ = try flushEncryptedHandle(h)
     }
   }
 
@@ -301,7 +302,8 @@ final class ProtectFsFuse {
         }
 
       case .encrypted:
-        try flushEncryptedHandle(h)
+        let flushed = try flushEncryptedHandle(h)
+        setHandle(handleId, flushed)
     }
   }
 
