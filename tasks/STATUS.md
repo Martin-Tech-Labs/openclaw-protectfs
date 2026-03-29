@@ -8,18 +8,17 @@
 ## Current focus
 
 ### Swift rewrite (#87)
-- **Current item:** #87 (Swift FUSE): keep Swift components building in CI + add more core unit coverage
-- **Status:** In Review (PR #132)
-- Review rounds: 0
+- **Current item:** #87 (Swift FUSE): incremental parity + wrapper integration hooks
+- **Status:** In Progress
+- Review rounds (next PR): 0
 
 Current PRs:
-- PR #132: fusefs-swift: test crypto + DEK format parity
-  - Adds unit tests for CryptoV1 (encrypted file format v1) + DekStoreV1 (wrapped DEK v1)
-  - Awaiting: CI green + Joao review
+- (none)
 
-Recently:
-- PR #131 merged: fusefs-swift: add SwiftPM unit tests for core policy
-- PR #130 merged: fusefs-swift: factor core module so CI can compile without macFUSE
+Recently merged:
+- PR #132: fusefs-swift: test crypto + DEK format parity
+- PR #131: fusefs-swift: add SwiftPM unit tests for core policy
+- PR #130: fusefs-swift: factor core module so CI can compile without macFUSE
 
 Recently:
 - PR #126 merged: Swift FUSE: encrypted-at-rest ops + liveness-gated authz (Refs #109).

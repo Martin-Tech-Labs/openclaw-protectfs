@@ -52,6 +52,12 @@
   typedef int (*fuse_utimens_t)(const char* path, const struct timespec tv[2]);
   typedef int (*fuse_statfs_t)(const char* path, struct statvfs* stbuf);
 
+  // Called after a successful mount. Return value is user_data (unused here).
+  struct fuse_conn_info {
+    int _unused;
+  };
+  typedef void* (*fuse_init_t)(struct fuse_conn_info* conn);
+
   struct fuse_operations {
     fuse_getattr_t getattr;
     fuse_access_t access;
@@ -72,6 +78,7 @@
     fuse_chown_t chown;
     fuse_utimens_t utimens;
     fuse_statfs_t statfs;
+    fuse_init_t init;
   };
 
   // Declaration only; linking is only required when building the executable.
