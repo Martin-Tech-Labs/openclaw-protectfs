@@ -13,7 +13,10 @@
 - Review rounds: 0
 
 Current PRs:
-- PR #130: fusefs-swift: factor core module so CI can compile without macFUSE
+- PR #131: fusefs-swift: add SwiftPM unit tests for core policy (CI fix pushed to avoid requiring macFUSE headers)
+
+Recently:
+- PR #130 merged: fusefs-swift: factor core module so CI can compile without macFUSE
 
 Recently:
 - PR #126 merged: Swift FUSE: encrypted-at-rest ops + liveness-gated authz (Refs #109).
