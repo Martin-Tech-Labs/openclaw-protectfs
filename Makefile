@@ -28,8 +28,10 @@ swift-build:
 # explicitly enabled *and* headers are available.
 swift-test:
 	@echo "Running fusefs-swift core unit tests (no macFUSE required)"
-	cd fusefs-swift && swift build --target OcProtectFsFuseCoreTests
-	cd fusefs-swift && swift test --skip-build
+	# GitHub-hosted macOS runners may set SWIFT_TESTING_ENABLED=0 in the environment,
+	# which forces SwiftPM down the XCTest path. Our tests use Swift Testing (@Test),
+	# so force-enable it for deterministic CI.
+	cd fusefs-swift && SWIFT_TESTING_ENABLED=1 swift test
 	@if [ "${OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT:-0}" = "1" ]; then \
 		if [ -f /opt/homebrew/include/fuse/fuse.h ] || [ -f /usr/local/include/fuse/fuse.h ]; then \
 			echo "OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT=1; building fusefs-swift executable"; \
@@ -41,4 +43,4 @@ swift-test:
 	else \
 		echo "Skipping fusefs-swift executable build (set OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT=1 to enable)"; \
 	fi
-	cd supervisor-swift && swift test
+	cd supervisor-swift && SWIFT_TESTING_ENABLED=1 swift test
