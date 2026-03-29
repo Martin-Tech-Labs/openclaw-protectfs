@@ -19,6 +19,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
+const { spawnSync } = require('node:child_process');
 
 const { makeFuseOps } = require('./src/fuse-ops');
 
@@ -36,6 +37,8 @@ function parseArgs(argv) {
     mountpoint: defaultMountpoint(),
     kekFd: null,
     plaintextPrefixes: null,
+    impl: process.env.OCPROTECTFS_FUSE_IMPL || 'node',
+    swiftBin: process.env.OCPROTECTFS_FUSE_SWIFT_BIN || null,
   };
 
   const args = argv.slice(2);
@@ -64,6 +67,12 @@ function parseArgs(argv) {
         cfg.plaintextPrefixes.push(p);
         break;
       }
+      case '--impl':
+        cfg.impl = next();
+        break;
+      case '--swift-bin':
+        cfg.swiftBin = next();
+        break;
       case '--help':
       case '-h':
         printHelp();
@@ -85,11 +94,15 @@ Usage:
 Flags:
   --backstore <path>   Backstore directory (default ~/.openclaw.real)
   --mountpoint <path>  Mountpoint directory (default ~/.openclaw)
-  --kek-fd <n>           Read 32-byte KEK from the given file descriptor (recommended)
-  --plaintext-prefix <p>  Top-level plaintext passthrough prefix (repeatable)
-  -h, --help             Show help
+  --kek-fd <n>            Read 32-byte KEK from the given file descriptor (recommended)
+  --plaintext-prefix <p>   Top-level plaintext passthrough prefix (repeatable)
+  --impl <node|swift>      Select implementation (default: env OCPROTECTFS_FUSE_IMPL or node)
+  --swift-bin <path>       Path to Swift daemon executable (default: env OCPROTECTFS_FUSE_SWIFT_BIN)
+  -h, --help              Show help
 
 Environment:
+  OCPROTECTFS_FUSE_IMPL=node|swift         Select implementation (default: node)
+  OCPROTECTFS_FUSE_SWIFT_BIN=<path>        Path to Swift daemon executable
   OCPROTECTFS_LIVENESS_SOCK=<path>         Wrapper liveness unix socket (required for encrypted-path ops)
   OCPROTECTFS_PLAINTEXT_PREFIXES=a,b,c     Comma-separated passthrough prefixes (used if no flags provided)
   OCPROTECTFS_KEK_B64=<base64>             (legacy) 32-byte KEK, base64-encoded
@@ -105,6 +118,56 @@ function validatePath(p) {
   if (!st.isDirectory()) throw new Error(`path exists but is not a directory: ${clean}`);
 
   return clean;
+}
+
+function resolveSwiftFuseBin(cfg) {
+  if (cfg.swiftBin) return cfg.swiftBin;
+
+  // Prefer a local SwiftPM build output in this repo.
+  const base = path.join(__dirname, '..', 'fusefs-swift', '.build');
+  const release = path.join(base, 'release', 'ocprotectfs-fuse');
+  const debug = path.join(base, 'debug', 'ocprotectfs-fuse');
+
+  if (fs.existsSync(release)) return release;
+  if (fs.existsSync(debug)) return debug;
+  return null;
+}
+
+function withoutImplArgs(argv) {
+  const cleaned = [];
+  const args = argv.slice(2);
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === '--impl' || a === '--swift-bin') {
+      i++; // skip value
+      continue;
+    }
+    cleaned.push(a);
+  }
+  return cleaned;
+}
+
+function maybeExecSwift(cfg, argv) {
+  if (String(cfg.impl).toLowerCase() !== 'swift') return false;
+
+  if (process.platform !== 'darwin') {
+    throw new Error('Swift FUSE implementation requires macOS');
+  }
+
+  const bin = resolveSwiftFuseBin(cfg);
+  if (!bin) {
+    throw new Error(
+      'Swift FUSE daemon not found. Build it first (from fusefs-swift): ' +
+        'OCPROTECTFS_BUILD_FUSEFS_SWIFT=1 swift build -c release. ' +
+        'Then re-run with --impl swift or set OCPROTECTFS_FUSE_SWIFT_BIN.'
+    );
+  }
+
+  const res = spawnSync(bin, withoutImplArgs(argv), {
+    stdio: 'inherit',
+    env: process.env,
+  });
+  process.exit(res.status === null ? 1 : res.status);
 }
 
 function loadFuseNative() {
@@ -147,6 +210,7 @@ function loadKek(cfg) {
 
 function main() {
   const cfg = parseArgs(process.argv);
+  maybeExecSwift(cfg, process.argv);
 
   // Minimal safety checks: these should already be created/validated by wrapper,
   // but validate here as defense-in-depth.

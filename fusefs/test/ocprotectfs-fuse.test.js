@@ -79,6 +79,21 @@ test('ocprotectfs-fuse: --help exits 0', async () => {
   assert.match(out.buf, /ocprotectfs-fuse/);
 });
 
+test('ocprotectfs-fuse: --impl swift fails fast with a helpful error when swift daemon is not built', async () => {
+  const p = spawn(process.execPath, [FUSE_BIN, '--impl', 'swift'], { stdio: ['ignore', 'pipe', 'pipe'] });
+
+  const out = await new Promise((resolve) => {
+    let stdout = '';
+    let stderr = '';
+    p.stdout.on('data', (d) => (stdout += d.toString('utf8')));
+    p.stderr.on('data', (d) => (stderr += d.toString('utf8')));
+    p.on('close', (code) => resolve({ code, stdout, stderr }));
+  });
+
+  assert.notEqual(out.code, 0);
+  assert.match(out.stderr, /Swift FUSE daemon not found|Build it first|--backstore and --mountpoint are required/i);
+});
+
 function fsyncFileSafe(filePath) {
   try {
     const fd = fs.openSync(filePath, 'r+');
