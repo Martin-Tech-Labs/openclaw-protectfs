@@ -76,6 +76,26 @@ final class ProtectFsFuse {
 
   // MARK: - Handles
 
+  func destroy() {
+    // Best-effort cleanup: libfuse may call destroy even if not all handles have
+    // been released (e.g., unmount while files are still open). We flush dirty
+    // encrypted buffers so we don't lose writes.
+    handlesLock.lock()
+    let snapshot = handles
+    handles.removeAll(keepingCapacity: true)
+    handlesLock.unlock()
+
+    for (_, h) in snapshot {
+      switch h {
+        case let .plaintext(fd, _, _):
+          _ = close(fd)
+        case .encrypted:
+          // Best-effort: ignore flush errors during shutdown.
+          try? flushEncryptedHandle(h)
+      }
+    }
+  }
+
   private func allocHandle(_ h: Handle) -> UInt64 {
     handlesLock.lock()
     defer { handlesLock.unlock() }
@@ -658,6 +678,12 @@ func ocpfs_init(_ conn: UnsafeMutablePointer<fuse_conn_info>?) -> UnsafeMutableR
   return nil
 }
 
+@_cdecl("ocpfs_destroy")
+func ocpfs_destroy(_ privateData: UnsafeMutableRawPointer?) {
+  _ = privateData
+  ProtectFsFuse.shared.destroy()
+}
+
 func makeOperations() -> fuse_operations {
   var ops = fuse_operations()
   ops.getattr = ocpfs_getattr
@@ -680,5 +706,6 @@ func makeOperations() -> fuse_operations {
   ops.utimens = ocpfs_utimens
   ops.statfs = ocpfs_statfs
   ops.`init` = ocpfs_init
+  ops.destroy = ocpfs_destroy
   return ops
 }
