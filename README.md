@@ -28,10 +28,23 @@ Optional: one-command quickstart smoke test (Refs #88):
 bash scripts/quickstart.sh
 ```
 
-3) Start the supervisor.
+3) Build the Swift FUSE daemon (preferred).
+
+The Swift FUSE daemon executable (`ocprotectfs-fuse`) is an **opt-in** SwiftPM product because it depends on macFUSE headers.
+
+```bash
+# Build Swift components (macOS only)
+OCPROTECTFS_BUILD_FUSEFS_SWIFT=1 make swift-build
+
+# Point the Node launcher at the Swift daemon
+export OCPROTECTFS_FUSE_IMPL=swift
+export OCPROTECTFS_FUSE_SWIFT_BIN="$(pwd)/fusefs-swift/.build/debug/ocprotectfs-fuse"
+```
+
+4) Start the supervisor.
 
 The supervisor **supervises two long-running processes**:
-- the FUSE daemon (this repo): `fusefs/ocprotectfs-fuse.js`
+- the FUSE daemon (this repo): Swift (preferred) via `fusefs-swift` (launched through `fusefs/ocprotectfs-fuse.js`)
 - your OpenClaw gateway process (must stay running; supervisor will shut down the mount if it exits)
 
 If you just want to validate the mount + encryption behavior **without** starting OpenClaw yet, you can use a dummy gateway (`/bin/sleep`) for a smoke test:
@@ -62,7 +75,7 @@ If you need to rotate/reset the KEK (this will make existing encrypted data unre
 security delete-generic-password -s ocprotectfs -a kek
 ```
 
-4) Quick verify (plaintext vs ciphertext):
+5) Quick verify (plaintext vs ciphertext):
 
 ```bash
 # Workspace is passthrough plaintext
@@ -79,7 +92,7 @@ cat ~/.openclaw/_ocpfs_smoketest_secret.txt
 grep -R "secret" ~/.openclaw.real || echo "OK: not found in backstore"
 ```
 
-5) Rollback (if anything looks wrong): stop the supervisor (Ctrl-C) and see **Safety / rollback** below.
+6) Rollback (if anything looks wrong): stop the supervisor (Ctrl-C) and see **Safety / rollback** below.
 
 ### Developer quick start (tests)
 
@@ -115,6 +128,8 @@ This project provides a **path-compatible** mount over `~/.openclaw` that:
   - maintains a liveness socket so the FUSE layer can fail-closed if supervisor/gateway die
 
 - **FUSE daemon (`ocprotectfs-fuse`)**
+  - implemented in Swift (`fusefs-swift`) and launched via the Node entrypoint `fusefs/ocprotectfs-fuse.js`
+    - select Swift via `OCPROTECTFS_FUSE_IMPL=swift` (preferred)
   - implements filesystem operations (getattr/readdir/open/read/write/rename/unlink/…)
   - classifies paths (workspace passthrough vs encrypted)
   - encrypts/decrypts non-workspace file contents
@@ -328,9 +343,14 @@ Wrapper entrypoint:
 node wrapper/ocprotectfs.js --help
 ```
 
-Smoke-test invocation (mount + encrypt/decrypt behavior, with a dummy gateway that just keeps the supervisor alive):
+Smoke-test invocation (mount + encrypt/decrypt behavior, with a dummy gateway that just keeps the supervisor alive).
+
+Preferred: run the Swift FUSE daemon via the Node launcher:
 
 ```bash
+export OCPROTECTFS_FUSE_IMPL=swift
+export OCPROTECTFS_FUSE_SWIFT_BIN="$(pwd)/fusefs-swift/.build/debug/ocprotectfs-fuse"
+
 node wrapper/ocprotectfs.js \
   --require-fuse-ready \
   --fuse-bin "$(command -v node)" \
