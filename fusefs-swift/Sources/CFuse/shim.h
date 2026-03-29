@@ -57,6 +57,7 @@
     int _unused;
   };
   typedef void* (*fuse_init_t)(struct fuse_conn_info* conn);
+  typedef void (*fuse_destroy_t)(void* private_data);
 
   struct fuse_operations {
     fuse_getattr_t getattr;
@@ -79,6 +80,7 @@
     fuse_utimens_t utimens;
     fuse_statfs_t statfs;
     fuse_init_t init;
+    fuse_destroy_t destroy;
   };
 
   // Declaration only; linking is only required when building the executable.

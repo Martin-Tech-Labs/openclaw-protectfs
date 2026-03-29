@@ -13,7 +13,7 @@
 - Review rounds (next PR): 0
 
 Current PRs:
-- #138: fusefs-swift: add fail-closed authz tests (Closes #121; Refs #87)
+- #139: fusefs-swift: flush open handles on FUSE destroy (Refs #87)
 
 Notes:
 - Incremental parity + wrapper integration hooks (project tracks this at a higher level).
