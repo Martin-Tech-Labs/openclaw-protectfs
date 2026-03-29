@@ -36,9 +36,11 @@ The Swift FUSE daemon executable (`ocprotectfs-fuse`) is an **opt-in** SwiftPM p
 # Build Swift components (macOS only)
 OCPROTECTFS_BUILD_FUSEFS_SWIFT=1 make swift-build
 
-# Point the Node launcher at the Swift daemon
-export OCPROTECTFS_FUSE_IMPL=swift
+# Swift is the default on macOS. Optionally point the Node launcher at a specific Swift daemon binary:
 export OCPROTECTFS_FUSE_SWIFT_BIN="$(pwd)/fusefs-swift/.build/debug/ocprotectfs-fuse"
+
+# To force the legacy Node implementation (deprecated):
+# export OCPROTECTFS_FUSE_IMPL=node
 ```
 
 4) Start the supervisor.
@@ -129,7 +131,7 @@ This project provides a **path-compatible** mount over `~/.openclaw` that:
 
 - **FUSE daemon (`ocprotectfs-fuse`)**
   - implemented in Swift (`fusefs-swift`) and launched via the Node entrypoint `fusefs/ocprotectfs-fuse.js`
-    - select Swift via `OCPROTECTFS_FUSE_IMPL=swift` (preferred)
+    - Swift is the default on macOS; the Node implementation is legacy and requires `--impl node` / `OCPROTECTFS_FUSE_IMPL=node`
   - implements filesystem operations (getattr/readdir/open/read/write/rename/unlink/…)
   - classifies paths (workspace passthrough vs encrypted)
   - encrypts/decrypts non-workspace file contents
@@ -345,10 +347,9 @@ node wrapper/ocprotectfs.js --help
 
 Smoke-test invocation (mount + encrypt/decrypt behavior, with a dummy gateway that just keeps the supervisor alive).
 
-Preferred: run the Swift FUSE daemon via the Node launcher:
+Preferred: run the Swift FUSE daemon via the Node launcher (default on macOS):
 
 ```bash
-export OCPROTECTFS_FUSE_IMPL=swift
 export OCPROTECTFS_FUSE_SWIFT_BIN="$(pwd)/fusefs-swift/.build/debug/ocprotectfs-fuse"
 
 node wrapper/ocprotectfs.js \
