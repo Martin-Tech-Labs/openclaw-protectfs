@@ -13,7 +13,7 @@
 - Review rounds (next PR): 0
 
 Current PRs:
-- #137: fusefs-swift: add Node interop vector for encrypted file v1 (Closes #120; Refs #87)
+- #138: fusefs-swift: add fail-closed authz tests (Closes #121; Refs #87)
 
 Notes:
 - Incremental parity + wrapper integration hooks (project tracks this at a higher level).
