@@ -15,7 +15,7 @@ async function runFuseWithKek({ kekBuf, env = {}, extraArgs = [] }) {
   fs.mkdirSync(backstore);
   fs.mkdirSync(mountpoint);
 
-  const args = ['-r', STUB, FUSE_BIN, '--backstore', backstore, '--mountpoint', mountpoint, ...extraArgs];
+  const args = ['-r', STUB, FUSE_BIN, '--impl', 'node', '--backstore', backstore, '--mountpoint', mountpoint, ...extraArgs];
 
   // fd 3 is an anonymous pipe used for KEK transport.
   const p = spawn(process.execPath, args, {

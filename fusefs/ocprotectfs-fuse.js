@@ -37,7 +37,9 @@ function parseArgs(argv) {
     mountpoint: defaultMountpoint(),
     kekFd: null,
     plaintextPrefixes: null,
-    impl: process.env.OCPROTECTFS_FUSE_IMPL || 'node',
+    // Deprecation: on macOS, prefer the Swift daemon by default.
+    // Node.js fuse-native path remains available via explicit selection.
+    impl: process.env.OCPROTECTFS_FUSE_IMPL || (process.platform === 'darwin' ? 'swift' : 'node'),
     swiftBin: process.env.OCPROTECTFS_FUSE_SWIFT_BIN || null,
   };
 
@@ -96,12 +98,12 @@ Flags:
   --mountpoint <path>  Mountpoint directory (default ~/.openclaw)
   --kek-fd <n>            Read 32-byte KEK from the given file descriptor (recommended)
   --plaintext-prefix <p>   Top-level plaintext passthrough prefix (repeatable)
-  --impl <node|swift>      Select implementation (default: env OCPROTECTFS_FUSE_IMPL or node)
+  --impl <swift|node>      Select implementation (default: env OCPROTECTFS_FUSE_IMPL or: macOS=swift, other=node)
   --swift-bin <path>       Path to Swift daemon executable (default: env OCPROTECTFS_FUSE_SWIFT_BIN)
   -h, --help              Show help
 
 Environment:
-  OCPROTECTFS_FUSE_IMPL=node|swift         Select implementation (default: node)
+  OCPROTECTFS_FUSE_IMPL=swift|node         Select implementation (default: macOS=swift, other=node)
   OCPROTECTFS_FUSE_SWIFT_BIN=<path>        Path to Swift daemon executable
   OCPROTECTFS_LIVENESS_SOCK=<path>         Wrapper liveness unix socket (required for encrypted-path ops)
   OCPROTECTFS_PLAINTEXT_PREFIXES=a,b,c     Comma-separated passthrough prefixes (used if no flags provided)
@@ -159,7 +161,8 @@ function maybeExecSwift(cfg, argv) {
     throw new Error(
       'Swift FUSE daemon not found. Build it first (from fusefs-swift): ' +
         'OCPROTECTFS_BUILD_FUSEFS_SWIFT=1 swift build -c release. ' +
-        'Then re-run with --impl swift or set OCPROTECTFS_FUSE_SWIFT_BIN.'
+        'Then re-run with --impl swift (default on macOS) or set OCPROTECTFS_FUSE_SWIFT_BIN. ' +
+        'To use the legacy Node implementation explicitly, pass --impl node.'
     );
   }
 
@@ -211,6 +214,12 @@ function loadKek(cfg) {
 function main() {
   const cfg = parseArgs(process.argv);
   maybeExecSwift(cfg, process.argv);
+
+  if (process.platform === 'darwin' && String(cfg.impl).toLowerCase() === 'node') {
+    process.stderr.write(
+      'warning: --impl node is deprecated on macOS. Prefer the Swift daemon (default) and pass --impl swift.\n'
+    );
+  }
 
   // Minimal safety checks: these should already be created/validated by wrapper,
   // but validate here as defense-in-depth.

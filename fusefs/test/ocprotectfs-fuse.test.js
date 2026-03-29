@@ -94,6 +94,64 @@ test('ocprotectfs-fuse: --impl swift fails fast with a helpful error when swift 
   assert.match(out.stderr, /Swift FUSE daemon not found|Build it first|--backstore and --mountpoint are required|requires macOS/i);
 });
 
+test('ocprotectfs-fuse: best-effort real mount via Swift daemon when built (skipped in CI)', async (t) => {
+  if (!canAttemptRealMount()) {
+    t.skip('requires macOS + macFUSE + fuse-native');
+    return;
+  }
+
+  // If the Swift daemon is not built, skip instead of failing.
+  const swiftRelease = path.join(__dirname, '..', '..', 'fusefs-swift', '.build', 'release', 'ocprotectfs-fuse');
+  const swiftDebug = path.join(__dirname, '..', '..', 'fusefs-swift', '.build', 'debug', 'ocprotectfs-fuse');
+  if (!fs.existsSync(swiftRelease) && !fs.existsSync(swiftDebug)) {
+    t.skip('Swift daemon not built');
+    return;
+  }
+
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'ocpfs-fuse-swift-'));
+  const backstore = path.join(base, 'backstore');
+  const mountpoint = path.join(base, 'mountpoint');
+  fs.mkdirSync(backstore);
+  fs.mkdirSync(mountpoint);
+
+  const p = spawn(process.execPath, [FUSE_BIN, '--impl', 'swift', '--backstore', backstore, '--mountpoint', mountpoint], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  try {
+    await new Promise((resolve, reject) => {
+      const timeoutMs = 8000;
+      const tt = setTimeout(() => reject(new Error('timeout waiting for READY (mount)')), timeoutMs);
+      let buf = '';
+      p.stdout.on('data', (d) => {
+        buf += d.toString('utf8');
+        if (buf.includes('READY')) {
+          clearTimeout(tt);
+          resolve();
+        }
+      });
+      p.on('exit', (code, signal) => {
+        if (signal || (code && code !== 0)) {
+          clearTimeout(tt);
+          const why = signal ? `signal=${signal}` : `code=${code}`;
+          reject(new Error(`fuse process exited before READY (${why})`));
+        }
+      });
+    });
+
+    // Minimal smoke check: workspace passthrough writes through as plaintext.
+    const rel = path.join('workspace', 'hello.txt');
+    const mountFile = path.join(mountpoint, rel);
+    const backFile = path.join(backstore, rel);
+
+    fs.mkdirSync(path.join(mountpoint, 'workspace'), { recursive: true });
+    fs.writeFileSync(mountFile, 'hi from swift fuse');
+    assert.equal(fs.readFileSync(backFile, 'utf8'), 'hi from swift fuse');
+  } finally {
+    await killAndWait(p, 2000);
+  }
+});
+
 function fsyncFileSafe(filePath) {
   try {
     const fd = fs.openSync(filePath, 'r+');
@@ -159,7 +217,7 @@ test('ocprotectfs-fuse: best-effort real mount passthrough + fail-closed (skippe
   fs.mkdirSync(backstore);
   fs.mkdirSync(mountpoint);
 
-  const p = spawn(process.execPath, [FUSE_BIN, '--backstore', backstore, '--mountpoint', mountpoint], {
+  const p = spawn(process.execPath, [FUSE_BIN, '--impl', 'node', '--backstore', backstore, '--mountpoint', mountpoint], {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -217,7 +275,7 @@ test('ocprotectfs-fuse: best-effort real mount editor-style atomic save (workspa
   fs.mkdirSync(backstore);
   fs.mkdirSync(mountpoint);
 
-  const p = spawn(process.execPath, [FUSE_BIN, '--backstore', backstore, '--mountpoint', mountpoint], {
+  const p = spawn(process.execPath, [FUSE_BIN, '--impl', 'node', '--backstore', backstore, '--mountpoint', mountpoint], {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -292,7 +350,7 @@ test('ocprotectfs-fuse: best-effort real mount temp/swap file patterns (workspac
   fs.mkdirSync(backstore);
   fs.mkdirSync(mountpoint);
 
-  const p = spawn(process.execPath, [FUSE_BIN, '--backstore', backstore, '--mountpoint', mountpoint], {
+  const p = spawn(process.execPath, [FUSE_BIN, '--impl', 'node', '--backstore', backstore, '--mountpoint', mountpoint], {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -350,7 +408,7 @@ test('ocprotectfs-fuse: best-effort real mount chmod/utimens/fsync/statfs (works
   fs.mkdirSync(backstore);
   fs.mkdirSync(mountpoint);
 
-  const p = spawn(process.execPath, [FUSE_BIN, '--backstore', backstore, '--mountpoint', mountpoint], {
+  const p = spawn(process.execPath, [FUSE_BIN, '--impl', 'node', '--backstore', backstore, '--mountpoint', mountpoint], {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -430,7 +488,7 @@ test('ocprotectfs-fuse: best-effort real mount encrypted-at-rest (skipped in CI)
   const kek = Buffer.alloc(32, 7).toString('base64');
 
   await withTempLivenessSocket(base, async (sockPath) => {
-    const p = spawn(process.execPath, [FUSE_BIN, '--backstore', backstore, '--mountpoint', mountpoint], {
+    const p = spawn(process.execPath, [FUSE_BIN, '--impl', 'node', '--backstore', backstore, '--mountpoint', mountpoint], {
       stdio: ['ignore', 'pipe', 'pipe'],
       env: {
         ...process.env,
