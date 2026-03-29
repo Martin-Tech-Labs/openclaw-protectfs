@@ -28,7 +28,8 @@ swift-build:
 # explicitly enabled *and* headers are available.
 swift-test:
 	@echo "Running fusefs-swift core unit tests (no macFUSE required)"
-	cd fusefs-swift && swift test
+	cd fusefs-swift && swift build --target OcProtectFsFuseCoreTests
+	cd fusefs-swift && swift test --skip-build
 	@if [ "${OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT:-0}" = "1" ]; then \
 		if [ -f /opt/homebrew/include/fuse/fuse.h ] || [ -f /usr/local/include/fuse/fuse.h ]; then \
 			echo "OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT=1; building fusefs-swift executable"; \
