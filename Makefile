@@ -27,8 +27,8 @@ swift-build:
 # FUSE-independent core module, and only build the full executable when
 # explicitly enabled *and* headers are available.
 swift-test:
-	@echo "Building fusefs-swift core (no macFUSE required)"
-	cd fusefs-swift && swift build --target OcProtectFsFuseCore
+	@echo "Running fusefs-swift core unit tests (no macFUSE required)"
+	cd fusefs-swift && swift test
 	@if [ "${OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT:-0}" = "1" ]; then \
 		if [ -f /opt/homebrew/include/fuse/fuse.h ] || [ -f /usr/local/include/fuse/fuse.h ]; then \
 			echo "OCPROTECTFS_CI_BUILD_FUSEFS_SWIFT=1; building fusefs-swift executable"; \
