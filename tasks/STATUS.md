@@ -9,11 +9,13 @@
 
 ### Swift rewrite (#87)
 - **Current item:** #87 (Swift FUSE): keep Swift components building in CI
-- **Status:** In Progress
-- Review rounds: 0
+- **Status:** In Review (PR #131)
+- Review rounds: 1
 
 Current PRs:
-- PR #131: fusefs-swift: add SwiftPM unit tests for core policy (CI fix pushed to avoid requiring macFUSE headers)
+- PR #131: fusefs-swift: add SwiftPM unit tests for core policy
+  - Latest update: fix macOS CI by forcing Swift Testing and avoiding building the macFUSE-dependent FUSE target
+  - Awaiting: CI green + Joao review
 
 Recently:
 - PR #130 merged: fusefs-swift: factor core module so CI can compile without macFUSE
