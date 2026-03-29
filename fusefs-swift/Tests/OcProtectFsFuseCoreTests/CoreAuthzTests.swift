@@ -1,5 +1,6 @@
 import Testing
 @testable import OcProtectFsFuseCore
+import Darwin
 
 @Test func authorizeOpAllowsPlaintextWithoutGateway() throws {
   let res = Core.authorizeOp(
