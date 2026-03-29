@@ -13,12 +13,13 @@
 - Review rounds (next PR): 0
 
 Current PRs:
-- #135: fusefs: add --impl swift delegator (Refs #87)
+- #137: fusefs-swift: add Node interop vector for encrypted file v1 (Closes #120; Refs #87)
 
 Notes:
 - Incremental parity + wrapper integration hooks (project tracks this at a higher level).
 
 Recently merged:
+- PR #135: fusefs: add --impl swift delegator (Refs #87)
 - PR #132: fusefs-swift: test crypto + DEK format parity
 - PR #131: fusefs-swift: add SwiftPM unit tests for core policy
 - PR #130: fusefs-swift: factor core module so CI can compile without macFUSE
