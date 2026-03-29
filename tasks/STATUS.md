@@ -9,10 +9,10 @@
 
 ### Swift rewrite (#87)
 - **Current item:** #87 (Swift FUSE daemon rewrite / migration)
-- **Status:** In Review
-- Review rounds (next PR): 0
+- **Status:** Done
+- Review rounds: 1 (PR #142)
 
-Current PRs:
+Merged PRs:
 - #142: fusefs: make Swift FUSE daemon default on macOS (Closes #87)
 
 Notes:
