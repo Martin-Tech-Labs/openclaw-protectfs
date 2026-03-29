@@ -13,7 +13,7 @@
 - Review rounds (next PR): 0
 
 Current PRs:
-- (pending)
+- #135: fusefs: add --impl swift delegator (Refs #87)
 
 Notes:
 - Incremental parity + wrapper integration hooks (project tracks this at a higher level).
