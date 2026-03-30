@@ -9,7 +9,7 @@
 
 ### Swift supervisor rewrite (#86)
 - **Current item:** #114 (#86 Phase 3: Swift Keychain KEK management + ACL pinning)
-- **Status:** In Progress (branch: `feat/114-keychain-kek-acl`; PR not opened yet)
+- **Status:** In Progress (branch: `feat/114-keychain-kek-acl`; PR **#150** open)
 - Review rounds: 0
 - Last completed: **#113** (#86 Phase 2: Swift supervisor process lifecycle + liveness socket)
 - Status: Done (merged as PR **#148** on 2026-03-30)
