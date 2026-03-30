@@ -9,7 +9,7 @@
 
 ### Swift supervisor rewrite (#86)
 - **Current item:** #112 (#86 Phase 1: Swift supervisor package + CLI scaffold + unit test harness)
-- **Status:** In Progress
+- **Status:** In Review (PR #146)
 - Review rounds: 0
 
 Merged PRs:
