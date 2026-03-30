@@ -7,10 +7,10 @@
 
 ## Current focus
 
-### Swift rewrite (#87)
-- **Current item:** #87 (Swift FUSE daemon rewrite / migration)
-- **Status:** Done
-- Review rounds: 1 (PR #142)
+### Swift supervisor rewrite (#86)
+- **Current item:** #112 (#86 Phase 1: Swift supervisor package + CLI scaffold + unit test harness)
+- **Status:** In Review (PR #146)
+- Review rounds: 0
 
 Merged PRs:
 - #142: fusefs: make Swift FUSE daemon default on macOS (Closes #87)
