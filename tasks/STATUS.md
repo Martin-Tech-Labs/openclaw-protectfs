@@ -8,10 +8,14 @@
 ## Current focus
 
 ### Swift supervisor rewrite (#86)
-- **Current item:** (none)
+- **Current item:** #113 (#86 Phase 2: Swift supervisor process lifecycle + liveness socket)
+- **Status:** In Review (PR #148)
+- Review rounds: 0
 - Last completed: **#112** (#86 Phase 1: Swift supervisor package + CLI scaffold + unit test harness)
-- **Status:** Done (merged as PR **#146** on 2026-03-30)
-- Review rounds used: 1
+- Status: Done (merged as PR **#146** on 2026-03-30)
+
+Completed in this arc:
+- #112 (Phase 1) — merged as PR #146
 
 Merged PRs:
 - #146: supervisor-swift: add XCTest harness target (Closes #112)
