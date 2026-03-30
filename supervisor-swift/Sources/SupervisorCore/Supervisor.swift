@@ -50,7 +50,7 @@ public final class Supervisor {
   private let fm: FileManager
   private let log: (String) -> Void
 
-  public init(spawner: ProcessSpawner = FoundationProcessSpawner(), fileManager: FileManager = .default, log: @escaping (String) -> Void) {
+  public init(spawner: ProcessSpawner = PosixProcessSpawner(), fileManager: FileManager = .default, log: @escaping (String) -> Void) {
     self.spawner = spawner
     self.fm = fileManager
     self.log = log
@@ -81,20 +81,90 @@ public final class Supervisor {
       return .liveness
     }
 
+    // PLAN 19 parity: resolve KEK from Keychain on interactive macOS, otherwise
+    // use an ephemeral key (CI/tests/non-interactive).
+    let interactive = isatty(STDIN_FILENO) == 1 && isatty(STDOUT_FILENO) == 1
+    let platform = "darwin" // supervisor is macOS-only in practice; keep string parity with Node wrapper
+
+    let resolved: ResolvedKek
+    do {
+      resolved = try KekResolver.resolve(
+        platform: platform,
+        env: ProcessInfo.processInfo.environment,
+        isInteractive: interactive,
+        keychain: nil,
+        log: log
+      )
+      if resolved.source == .keychain {
+        log("kek: loaded from Keychain (service=ocprotectfs, account=kek)")
+      } else {
+        log("kek: CI/non-interactive; using ephemeral random KEK (tests/CI only)")
+      }
+    } catch {
+      log("kek: keychain failed: \(error)")
+      try? liveness.close()
+      return .config
+    }
+
     let childEnv = buildChildEnv(extra: [
       "OCPROTECTFS_LIVENESS_SOCK": liveness.path
     ])
 
-    let fuseArgs = normalizedFuseArgs(cfg)
-    log("starting fuse: \(cfg.fuseBin) \(fuseArgs.joined(separator: " "))")
+    var fuseArgs = normalizedFuseArgs(cfg)
 
     let fuse: SpawnedProcess
-    do {
-      fuse = try spawner.spawn(SpawnConfig(executable: cfg.fuseBin, arguments: fuseArgs, environment: childEnv))
-    } catch {
-      log("fuse spawn failed: \(error)")
-      try? liveness.close()
-      return .fuseStart
+
+    if cfg.fuseBin == "/bin/sleep" {
+      // Placeholder path used in unit tests / phase-1 scaffolding.
+      // Do not attempt KEK pipe handoff (sleep won't read, and tests would SIGPIPE).
+      log("starting fuse: \(cfg.fuseBin) \(fuseArgs.joined(separator: " "))")
+      do {
+        fuse = try spawner.spawn(SpawnConfig(executable: cfg.fuseBin, arguments: fuseArgs, environment: childEnv))
+      } catch {
+        log("fuse spawn failed: \(error)")
+        try? liveness.close()
+        return .fuseStart
+      }
+    } else {
+      // Create a dedicated pipe and pass read-end to the FUSE child as FD 3.
+      var kekPipe: [Int32] = [0, 0]
+      if pipe(&kekPipe) != 0 {
+        log("kek: pipe() failed: errno=\(errno)")
+        try? liveness.close()
+        return .fuseStart
+      }
+      let kekRead = kekPipe[0]
+      let kekWrite = kekPipe[1]
+      ProcUtils.setCloExec(kekWrite)
+
+      fuseArgs.append(contentsOf: ["--kek-fd", "3"])
+      log("starting fuse: \(cfg.fuseBin) \(fuseArgs.joined(separator: " "))")
+
+      do {
+        fuse = try spawner.spawn(SpawnConfig(
+          executable: cfg.fuseBin,
+          arguments: fuseArgs,
+          environment: childEnv,
+          extraFileDescriptors: [3: kekRead]
+        ))
+      } catch {
+        log("fuse spawn failed: \(error)")
+        close(kekRead)
+        close(kekWrite)
+        try? liveness.close()
+        return .fuseStart
+      }
+
+      // Parent no longer needs read end; write KEK then close.
+      close(kekRead)
+      do {
+        try writeKekToPipe(kek: resolved.kek, fd: kekWrite)
+      } catch {
+        log("kek: failed to write to fuse fd pipe: \(error)")
+        _ = shutdownBoth(fuse: fuse, gateway: nil, timeoutMs: cfg.shutdownTimeoutMs, mountpoint: cfg.mountpoint)
+        try? liveness.close()
+        return .fuseStart
+      }
     }
 
     // Optional readiness gate.
@@ -175,6 +245,20 @@ public final class Supervisor {
 
     for (k, v) in extra { env[k] = v }
     return env
+  }
+
+  private func writeKekToPipe(kek: Data, fd: Int32) throws {
+    if kek.count != 32 { throw KekError.invalidKekLength(kek.count) }
+
+    let h = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+    do {
+      try h.write(contentsOf: kek)
+    } catch {
+      // EPIPE/ECONNRESET can happen if the child exits early; surface as error
+      // so we can fail-closed.
+      throw error
+    }
+    try? h.close()
   }
 
   private struct ReadyResult: Equatable {
