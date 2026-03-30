@@ -8,11 +8,13 @@
 ## Current focus
 
 ### Swift supervisor rewrite (#86)
-- **Current item:** #112 (#86 Phase 1: Swift supervisor package + CLI scaffold + unit test harness)
-- **Status:** In Review (PR #146)
-- Review rounds: 0
+- **Current item:** (none)
+- Last completed: **#112** (#86 Phase 1: Swift supervisor package + CLI scaffold + unit test harness)
+- **Status:** Done (merged as PR **#146** on 2026-03-30)
+- Review rounds used: 1
 
 Merged PRs:
+- #146: supervisor-swift: add XCTest harness target (Closes #112)
 - #142: fusefs: make Swift FUSE daemon default on macOS (Closes #87)
 
 Notes:
