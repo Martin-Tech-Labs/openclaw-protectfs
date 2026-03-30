@@ -8,21 +8,23 @@
 ## Current focus
 
 ### Swift supervisor rewrite (#86)
-- **Current item:** #113 (#86 Phase 2: Swift supervisor process lifecycle + liveness socket)
-- **Status:** In Review (PR #148)
+- **Current item:** #114 (#86 Phase 3: Swift Keychain KEK management + ACL pinning)
+- **Status:** Todo (no PR yet)
 - Review rounds: 0
-- Last completed: **#112** (#86 Phase 1: Swift supervisor package + CLI scaffold + unit test harness)
-- Status: Done (merged as PR **#146** on 2026-03-30)
+- Last completed: **#113** (#86 Phase 2: Swift supervisor process lifecycle + liveness socket)
+- Status: Done (merged as PR **#148** on 2026-03-30)
 
 Completed in this arc:
 - #112 (Phase 1) — merged as PR #146
+- #113 (Phase 2) — merged as PR #148
 
 Merged PRs:
+- #148: supervisor-swift: process lifecycle + liveness socket (Closes #113)
 - #146: supervisor-swift: add XCTest harness target (Closes #112)
 - #142: fusefs: make Swift FUSE daemon default on macOS (Closes #87)
 
 Notes:
-- Incremental parity + wrapper integration hooks (project tracks this at a higher level).
+- #114 is now queued as the next phase; prefer completing it in a single PR with iterative commits (completeness-first).
 
 Recently merged:
 - PR #140: fusefs-swift: clear encrypted-handle dirty flag after flush (Refs #87)
