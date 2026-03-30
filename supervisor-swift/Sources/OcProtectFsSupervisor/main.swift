@@ -21,24 +21,37 @@ do {
     exit(0)
   }
 
-  // Phase 1: parsing-only scaffold. Real lifecycle + Keychain work is tracked in follow-up issues.
+  _ = res.configPath // reserved for follow-up issue: config file support.
+
+  func log(_ msg: String) {
+    let ts = ISO8601DateFormatter().string(from: Date())
+    stderr("\(ts) \(msg)")
+  }
+
   switch res.action {
   case .run:
-    stderr("\(program): phase 1 scaffold (parsing only).")
+    let sup = Supervisor(log: log)
+    let cfg = SupervisorConfig(options: res.options)
+    let code = sup.run(cfg)
+    exit(code.rawValue)
+
   case .mount:
-    stderr("\(program): mount (phase 1 stub; parsed only).")
+    stderr("\(program): mount action not implemented yet (phase 2 focuses on run lifecycle)")
+    exit(ExitCode.config.rawValue)
+
   case .unmount:
-    stderr("\(program): unmount (phase 1 stub; parsed only).")
+    stderr("\(program): unmount action not implemented yet (phase 2 focuses on run lifecycle)")
+    exit(ExitCode.config.rawValue)
+
   case .status:
-    stderr("\(program): status (phase 1 stub; parsed only).")
+    stderr("\(program): status action not implemented yet (phase 2 focuses on run lifecycle)")
+    exit(ExitCode.config.rawValue)
   }
-  _ = res.configPath // reserved for follow-up issue: config file support.
-  exit(0)
 } catch let e as CLIError {
   stderr(e.description)
   stderr("")
   stderr(CLI.helpText(program: program))
-  exit(2)
+  exit(ExitCode.config.rawValue)
 } catch {
   stderr("Unexpected error: \(error)")
   exit(1)
