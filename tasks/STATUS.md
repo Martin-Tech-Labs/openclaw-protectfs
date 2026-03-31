@@ -62,13 +62,14 @@ Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
 - **PLAN 20-repo-layout-tests** — repo layout already in src/ + test/ + acceptance/ (wrapper + fusefs); README updated to document layout + test commands.
 - **PLAN 19-keychain-kek-e2e** — merged as PR **#49** (Keychain KEK + FD handoff; no env secret).
 - **PLAN 25-license-badges** — done (MIT LICENSE + README badges), merged as PR **#53**.
+- #152 — Real-mount tests: deterministic guard + docs for Node 25.x fuse-native instability (macOS)
+  - Result: real-mount tests and legacy `--impl node` now fail/skip with a clear message on Node >= 25 unless explicitly forced.
+  - Docs: README notes supported Node versions (22/24 LTS) and override env vars.
 
 ## Backlog (queued)
 - (none)
 
 ## In progress
-- #152 — Real-mount tests: FUSE process SIGSEGV before READY on Node 25.6.1 (macOS)
-  - Approach: add explicit Node-major guard + docs so failures are clear and deterministic.
 
 ## Final bookkeeping
 - This file/README now explicitly declare **Initial: COMPLETE**.
