@@ -232,6 +232,7 @@ function main() {
   const nodeMajor = Number(String(process.versions.node).split('.')[0]);
   const isFuseNativeStubbed = process.execArgv.some((a) => String(a).includes('_stub-fuse-native.js'));
   if (
+    process.platform === 'darwin' &&
     String(cfg.impl).toLowerCase() === 'node' &&
     nodeMajor >= 25 &&
     !isFuseNativeStubbed &&

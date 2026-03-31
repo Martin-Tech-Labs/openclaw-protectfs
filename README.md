@@ -41,7 +41,7 @@ export OCPROTECTFS_FUSE_SWIFT_BIN="$(pwd)/fusefs-swift/.build/debug/ocprotectfs-
 
 # To force the legacy Node implementation (deprecated):
 # export OCPROTECTFS_FUSE_IMPL=node
-# Note: the legacy Node (fuse-native) path is not supported on Node >= 25 by default
+# Note: on macOS, the legacy Node (fuse-native) path is not supported on Node >= 25 by default
 # due to known native-addon instability; use Node 22/24 LTS or prefer Swift.
 ```
 
