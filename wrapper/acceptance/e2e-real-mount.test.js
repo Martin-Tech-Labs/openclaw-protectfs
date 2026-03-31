@@ -38,21 +38,48 @@ function canAttemptRealMount() {
   return true;
 }
 
-async function waitForNeedle(stream, needle, timeoutMs) {
+async function waitForNeedle(proc, stream, needle, timeoutMs) {
   return await new Promise((resolve, reject) => {
     const tt = setTimeout(() => reject(new Error(`timeout waiting for: ${needle}`)), timeoutMs);
     let buf = '';
 
+    const cleanup = () => {
+      clearTimeout(tt);
+      stream.off('data', onData);
+      stream.off('end', onEnd);
+      stream.off('close', onEnd);
+      proc.off('exit', onExit);
+    };
+
     const onData = (d) => {
       buf += d.toString('utf8');
       if (buf.includes(needle)) {
-        clearTimeout(tt);
-        stream.off('data', onData);
+        cleanup();
         resolve(buf);
       }
     };
 
+    const onExit = (code, signal) => {
+      cleanup();
+      const suffix = buf ? `\n\n--- process output ---\n${buf}` : '';
+      reject(new Error(`process exited before seeing needle: ${needle} (code=${code}, signal=${signal})${suffix}`));
+    };
+
+    const onEnd = () => {
+      // stderr closed without emitting the needle; treat as failure.
+      onExit(proc.exitCode, proc.signalCode);
+    };
+
     stream.on('data', onData);
+    stream.on('end', onEnd);
+    stream.on('close', onEnd);
+    proc.on('exit', onExit);
+
+    // Avoid a race where the child exits before handlers are attached.
+    setImmediate(() => {
+      if (proc.exitCode !== null || proc.signalCode) onExit(proc.exitCode, proc.signalCode);
+      if (stream.readableEnded) onEnd();
+    });
   });
 }
 
@@ -130,7 +157,7 @@ test('wrapper: best-effort e2e real mount via wrapper + fuse (skipped in CI)', a
   const p = spawn(process.execPath, args, { stdio: ['ignore', 'ignore', 'pipe'] });
 
   try {
-    await waitForNeedle(p.stderr, 'fuse reported ready', 12000);
+    await waitForNeedle(p, p.stderr, 'fuse reported ready', 12000);
 
     // Once mounted, workspace should be plaintext passthrough.
     const wsDir = path.join(mountpoint, 'workspace');
