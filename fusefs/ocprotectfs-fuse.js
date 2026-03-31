@@ -226,6 +226,25 @@ function main() {
   const backstore = validatePath(cfg.backstore);
   const mountpoint = validatePath(cfg.mountpoint);
 
+  // fuse-native has historically been sensitive to Node major versions.
+  // If we know a given Node major is unstable, fail fast with a clear error
+  // instead of crashing with a SIGSEGV deep inside the native addon.
+  const nodeMajor = Number(String(process.versions.node).split('.')[0]);
+  const isFuseNativeStubbed = process.execArgv.some((a) => String(a).includes('_stub-fuse-native.js'));
+  if (
+    process.platform === 'darwin' &&
+    String(cfg.impl).toLowerCase() === 'node' &&
+    nodeMajor >= 25 &&
+    !isFuseNativeStubbed &&
+    process.env.OCPROTECTFS_ALLOW_UNSUPPORTED_NODE_FUSE_NATIVE !== '1'
+  ) {
+    throw new Error(
+      `Node ${process.versions.node} is not supported for the legacy --impl node (fuse-native) path on macOS. ` +
+        `Prefer the Swift daemon (--impl swift, default on macOS), or use Node 22/24 LTS. ` +
+        `To force anyway, set OCPROTECTFS_ALLOW_UNSUPPORTED_NODE_FUSE_NATIVE=1.`
+    );
+  }
+
   const Fuse = loadFuseNative();
 
   // Encrypted-path ops fail closed unless the wrapper liveness socket is present.
