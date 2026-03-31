@@ -1,6 +1,7 @@
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
 const net = require('node:net');
 const crypto = require('node:crypto');
 
@@ -185,7 +186,19 @@ function prepareDir(p, mode) {
 async function createLivenessSocket(mountpoint) {
   // Keep socket filename short to avoid unix domain socket path length limits
   // on macOS (sun_path is ~104 bytes).
-  const sockPath = path.join(mountpoint, '.ocpfs.sock');
+  //
+  // IMPORTANT: do not place the socket *inside the mountpoint* before mounting.
+  // macFUSE requires the mountpoint directory to be empty, and pre-creating a
+  // socket there causes the mount to fail with:
+  //   fuse: invalid argument `<mountpoint>`
+  //
+  // Any path is acceptable as long as it's a socket and is passed via
+  // OCPROTECTFS_LIVENESS_SOCK.
+  //
+  // Tests may set OCPROTECTFS_LIVENESS_SOCK_PATH to force a deterministic
+  // location.
+  const override = process.env.OCPROTECTFS_LIVENESS_SOCK_PATH;
+  const sockPath = override || path.join(os.tmpdir(), `.ocpfs.${process.pid}.sock`);
 
   // If a stale socket exists, remove it. If a non-socket exists, refuse.
   try {
@@ -246,7 +259,7 @@ async function run(cfg) {
   if (mig.migrated) log(`migration complete: moved legacy mountpoint content to ${mig.legacyDir}`);
 
   // Task 05: liveness socket contract
-  // - wrapper creates a unix socket in the mountpoint
+  // - wrapper creates a unix socket (outside the mountpoint; mountpoint must be empty for macFUSE)
   // - wrapper passes its path to both fuse and gateway via env
   // - wrapper removes the socket on shutdown
   let liveness;
@@ -281,7 +294,35 @@ async function run(cfg) {
     OCPROTECTFS_LIVENESS_SOCK: liveness.path,
   });
 
-  const fuseArgs = [...cfg.fuseArgs, '--kek-fd', '3'];
+  // The FUSE daemon contract expects --backstore/--mountpoint. Even if callers
+  // provide a custom fuse entrypoint (e.g. `node fusefs/ocprotectfs-fuse.js`),
+  // the wrapper must pass these through so non-default mountpoints work.
+  //
+  // Avoid double-inserting if the caller already provided them explicitly.
+  const fuseArgs = [...cfg.fuseArgs];
+
+  const hasBackstore = fuseArgs.includes('--backstore');
+  const hasMountpoint = fuseArgs.includes('--mountpoint');
+
+  // If we're spawning via `node <script> ...`, we must insert flags *after* the
+  // script path so Node doesn't treat them as its own CLI flags.
+  const fuseBinBase = path.basename(String(cfg.fuseBin));
+  const looksLikeNodeInvoker = fuseBinBase === 'node' || fuseBinBase === 'nodejs';
+  const firstArgIsScript = fuseArgs.length > 0 && !String(fuseArgs[0]).startsWith('-');
+
+  const insertArgs = (idx, arr) => fuseArgs.splice(idx, 0, ...arr);
+
+  if (!hasBackstore || !hasMountpoint) {
+    const toInsert = [];
+    if (!hasBackstore) toInsert.push('--backstore', cfg.backstore);
+    if (!hasMountpoint) toInsert.push('--mountpoint', cfg.mountpoint);
+
+    if (looksLikeNodeInvoker && firstArgIsScript) insertArgs(1, toInsert);
+    else insertArgs(0, toInsert);
+  }
+
+  fuseArgs.push('--kek-fd', '3');
+
   const fuse = spawn(cfg.fuseBin, fuseArgs, {
     stdio: ['ignore', 'pipe', 'pipe', 'pipe'],
     detached: true,

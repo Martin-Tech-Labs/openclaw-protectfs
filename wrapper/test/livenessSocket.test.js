@@ -21,7 +21,7 @@ async function waitForExists(p, timeoutMs = 2000) {
   throw new Error(`timeout waiting for path to exist: ${p}`);
 }
 
-function spawnWrapper({ cwd, backstore, mountpoint, fuseScript, gatewayScript, shutdownTimeoutMs = 1000 }) {
+function spawnWrapper({ cwd, backstore, mountpoint, fuseScript, gatewayScript, shutdownTimeoutMs = 1000, env = {} }) {
   const wrapperBin = path.join(__dirname, '..', 'ocprotectfs.js');
   const args = [
     wrapperBin,
@@ -47,6 +47,7 @@ function spawnWrapper({ cwd, backstore, mountpoint, fuseScript, gatewayScript, s
   return spawn(process.execPath, args, {
     cwd,
     stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, ...env },
   });
 }
 
@@ -86,8 +87,16 @@ test('wrapper liveness socket: created, answers OK, removed on SIGTERM', async (
     ].join('\n'),
   );
 
-  const wrapper = spawnWrapper({ cwd: dir, backstore, mountpoint, fuseScript, gatewayScript, shutdownTimeoutMs: 1500 });
-  const sockPath = path.join(mountpoint, '.ocpfs.sock');
+  const sockPath = path.join(dir, 'l.sock');
+  const wrapper = spawnWrapper({
+    cwd: dir,
+    backstore,
+    mountpoint,
+    fuseScript,
+    gatewayScript,
+    shutdownTimeoutMs: 1500,
+    env: { OCPROTECTFS_LIVENESS_SOCK_PATH: sockPath },
+  });
 
   try {
     await waitForExists(sockPath);
@@ -125,7 +134,7 @@ test('wrapper liveness socket: fails if socket path is occupied by non-socket', 
   const mountpoint = path.join(dir, 'm');
   fs.mkdirSync(mountpoint, { recursive: true, mode: 0o700 });
 
-  const sockPath = path.join(mountpoint, '.ocpfs.sock');
+  const sockPath = path.join(dir, 'l.sock');
   fs.writeFileSync(sockPath, 'not a socket');
 
   const fuseScript = path.join(dir, 'fuse.js');
@@ -145,7 +154,15 @@ test('wrapper liveness socket: fails if socket path is occupied by non-socket', 
     ].join('\n'),
   );
 
-  const wrapper = spawnWrapper({ cwd: dir, backstore, mountpoint, fuseScript, gatewayScript, shutdownTimeoutMs: 500 });
+  const wrapper = spawnWrapper({
+    cwd: dir,
+    backstore,
+    mountpoint,
+    fuseScript,
+    gatewayScript,
+    shutdownTimeoutMs: 500,
+    env: { OCPROTECTFS_LIVENESS_SOCK_PATH: sockPath },
+  });
 
   try {
     const exit = await new Promise((resolve) => wrapper.once('exit', (code, signal) => resolve({ code, signal })));
