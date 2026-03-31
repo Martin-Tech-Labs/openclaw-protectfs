@@ -8,23 +8,22 @@
 ## Current focus
 
 ### Swift supervisor rewrite (#86)
-- **Current item:** #114 (#86 Phase 3: Swift Keychain KEK management + ACL pinning)
-- **Status:** In Progress (branch: `feat/114-keychain-kek-acl`; PR **#150** open)
-- Review rounds: 0
-- Last completed: **#113** (#86 Phase 2: Swift supervisor process lifecycle + liveness socket)
-- Status: Done (merged as PR **#148** on 2026-03-30)
+- **Status:** Done
+- Completed phases:
+  - #112 (Phase 1) — merged as PR #146
+  - #113 (Phase 2) — merged as PR #148
+  - #114 (Phase 3) — merged as PR #150 (2026-03-30)
 
 Completed in this arc:
 - #112 (Phase 1) — merged as PR #146
 - #113 (Phase 2) — merged as PR #148
+- #114 (Phase 3) — merged as PR #150
 
 Merged PRs:
+- #150: supervisor-swift: Keychain KEK + fd handoff (Refs #114)
 - #148: supervisor-swift: process lifecycle + liveness socket (Closes #113)
 - #146: supervisor-swift: add XCTest harness target (Closes #112)
 - #142: fusefs: make Swift FUSE daemon default on macOS (Closes #87)
-
-Notes:
-- #114 is now queued as the next phase; prefer completing it in a single PR with iterative commits (completeness-first).
 
 Recently merged:
 - PR #140: fusefs-swift: clear encrypted-handle dirty flag after flush (Refs #87)
@@ -40,6 +39,7 @@ Notes:
 - CI compile coverage for the `fusefs-swift` core module is in place; executable build remains opt-in when macFUSE headers are present.
 
 ### Post-PLAN 19 verification (confidence pass)
+- **Current item:** Real mount verification on macOS
 Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
 
 - Real-mount tests run **by default** on macOS when prerequisites exist (macFUSE + `fuse-native`).
