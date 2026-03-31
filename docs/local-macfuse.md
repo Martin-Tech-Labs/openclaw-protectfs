@@ -12,7 +12,10 @@ They are designed to be **skipped in CI** and to run on a developer’s Mac.
     - `/Library/Filesystems/macfuse.fs`
     - (legacy) `/Library/Filesystems/osxfuse.fs`
   - Note: macFUSE requires approving a **System Extension** in System Settings.
-- **Node.js** (prefer an LTS release; `fuse-native` can be unstable/segfault on very new Node majors)
+- **Node.js** (prefer an LTS release)
+  - Real-mount tests are **skipped by default on Node >= 25** due to observed `fuse-native` instability/segfaults (see #152).
+  - Recommended: **Node 22 LTS** (or Node 24 if you already use it).
+  - Override: set `OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1` to force an attempt.
 - The optional dependency **`fuse-native`** must be installed and loadable
   - The test suite uses `require('fuse-native')` as a readiness heuristic.
 
