@@ -64,7 +64,7 @@ Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
 - **PLAN 25-license-badges** — done (MIT LICENSE + README badges), merged as PR **#53**.
 
 ## Backlog (queued)
-- (none — see “Post-PLAN 19 verification” checklist above)
+- #152 — Real-mount tests: FUSE process SIGSEGV before READY on Node 25.6.1 (macOS)
 
 ## Final bookkeeping
 - This file/README now explicitly declare **Initial: COMPLETE**.
