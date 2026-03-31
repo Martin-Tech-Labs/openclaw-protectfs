@@ -402,6 +402,8 @@ test('wrapper lifecycle: best-effort unmount invoked on shutdown', async () => {
   const gatewayScript = path.join(dir, 'gateway.js');
   fs.writeFileSync(gatewayScript, ['setInterval(() => {}, 1000);'].join('\n'));
 
+  const sockPath = path.join(dir, 'l.sock');
+
   const wrapper = spawnWrapper({
     cwd: dir,
     backstore,
@@ -411,6 +413,7 @@ test('wrapper lifecycle: best-effort unmount invoked on shutdown', async () => {
     shutdownTimeoutMs: 1500,
     env: {
       PATH: `${binDir}`,
+      OCPROTECTFS_LIVENESS_SOCK_PATH: sockPath,
     },
   });
 
@@ -421,7 +424,7 @@ test('wrapper lifecycle: best-effort unmount invoked on shutdown', async () => {
   try {
     // Wait until the wrapper has completed its early setup (mountpoint exists,
     // liveness socket created) so shutdown triggers unmount logic.
-    await waitForFile(path.join(mountpoint, '.ocpfs.sock'), { proc: wrapper });
+    await waitForFile(sockPath, { proc: wrapper, capture: () => buf });
 
     // Give the wrapper a moment to attach SIGTERM/SIGINT handlers in supervise().
     await sleep(100);
