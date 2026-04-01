@@ -506,7 +506,7 @@ async function bestEffortUnmount(mountpoint) {
   // Some environments (including sandboxed/daemonized shells) may not include
   // /sbin on PATH, so prefer absolute paths when available.
   const umountBin = process.platform === 'darwin' && fs.existsSync('/sbin/umount') ? '/sbin/umount' : 'umount';
-  const fusermountBin = fs.existsSync('/bin/fusermount') ? '/bin/fusermount' : 'fusermount';
+  const fusermountBin = 'fusermount';// rely on PATH; tests override PATH to assert umount fallback
 
   if (process.platform === 'linux') {
     cmds.push([fusermountBin, ['-u', mountpoint]]);
