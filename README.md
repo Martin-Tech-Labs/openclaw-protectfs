@@ -96,6 +96,12 @@ cat ~/.openclaw/_ocpfs_smoketest_secret.txt
 grep -R "secret" ~/.openclaw.real || echo "OK: not found in backstore"
 ```
 
+Optional: run the scripted confidence pass (Issue #161 helper):
+
+```bash
+bash scripts/real-mount-verify.sh
+```
+
 6) Rollback (if anything looks wrong): stop the supervisor (Ctrl-C) and see **Safety / rollback** below.
 
 ### Developer quick start (tests)
