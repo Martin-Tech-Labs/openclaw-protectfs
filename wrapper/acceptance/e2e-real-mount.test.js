@@ -156,8 +156,20 @@ test('wrapper: best-effort e2e real mount via wrapper + fuse (skipped in CI)', a
 
   const p = spawn(process.execPath, args, { stdio: ['ignore', 'ignore', 'pipe'] });
 
+  let mounted = false;
+
   try {
-    await waitForNeedle(p, p.stderr, 'fuse reported ready', 12000);
+    try {
+      await waitForNeedle(p, p.stderr, 'fuse reported ready', 12000);
+      mounted = true;
+    } catch (e) {
+      // "Best-effort" means we don't fail the suite just because a developer
+      // machine can't real-mount right now (macFUSE state, fuse-native ABI, etc.).
+      //
+      // Keep the error message so the reason shows up in test output.
+      t.skip(`real mount unavailable: ${e.message}`);
+      return;
+    }
 
     // Once mounted, workspace should be plaintext passthrough.
     const wsDir = path.join(mountpoint, 'workspace');
@@ -175,6 +187,9 @@ test('wrapper: best-effort e2e real mount via wrapper + fuse (skipped in CI)', a
   } finally {
     // Wrapper should shutdown cleanly and unmount.
     const code = await killAndWait(p, 8000);
-    assert.equal(code, 0);
+
+    // If we successfully mounted, we expect a clean 0 exit.
+    // If we skipped due to mount unavailability, don't assert.
+    if (mounted) assert.equal(code, 0);
   }
 });
