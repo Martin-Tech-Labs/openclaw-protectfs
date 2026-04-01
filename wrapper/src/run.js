@@ -502,14 +502,20 @@ async function bestEffortUnmount(mountpoint) {
   // - macOS: `umount` exists; `umount -f` can help if busy.
   // - Linux: prefer `fusermount -u` when available, then fall back to `umount`.
   const cmds = [];
+
+  // Some environments (including sandboxed/daemonized shells) may not include
+  // /sbin on PATH, so prefer absolute paths when available.
+  const umountBin = process.platform === 'darwin' && fs.existsSync('/sbin/umount') ? '/sbin/umount' : 'umount';
+  const fusermountBin = fs.existsSync('/bin/fusermount') ? '/bin/fusermount' : 'fusermount';
+
   if (process.platform === 'linux') {
-    cmds.push(['fusermount', ['-u', mountpoint]]);
-    cmds.push(['umount', [mountpoint]]);
+    cmds.push([fusermountBin, ['-u', mountpoint]]);
+    cmds.push([umountBin, [mountpoint]]);
   } else if (process.platform === 'darwin') {
-    cmds.push(['umount', [mountpoint]]);
-    cmds.push(['umount', ['-f', mountpoint]]);
+    cmds.push([umountBin, [mountpoint]]);
+    cmds.push([umountBin, ['-f', mountpoint]]);
   } else {
-    cmds.push(['umount', [mountpoint]]);
+    cmds.push([umountBin, [mountpoint]]);
   }
 
   for (const [bin, args] of cmds) {
