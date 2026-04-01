@@ -52,6 +52,7 @@ Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
   - Note: Node >= 25 is only a problem for the legacy `fuse-native` path (`OCPROTECTFS_FUSE_IMPL=node`). The helper script uses the preferred Swift daemon path, so it should run fine on Node 25.x.
   - Previously blocked (2026-04-01): Swift daemon mount failed with `fuse: invalid argument <mountpoint>`.
     - Root cause + fix: merged in PR #168 (issue #167) — strip ocprotectfs-only flags before invoking libfuse + force foreground; scripts prefer `/sbin/{mount,umount}`.
+  - Note (2026-04-01): running `scripts/real-mount-verify.sh` from a **non-interactive** session can hang mid-smoketest (observed stuck on `mkdir` inside the mounted FS). The script now uses explicit timeouts around mounted-FS ops, but an interactive terminal run is still preferred for the Keychain prompt/ACL validation.
   - [ ] Wrapper mounts `~/.openclaw` over an existing OpenClaw install.
   - [ ] Keychain prompt appears on first run and KEK is stored at:
         `service=ocprotectfs`, `account=kek`.
