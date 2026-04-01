@@ -20,8 +20,10 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-MOUNTPOINT="${MOUNTPOINT:-/tmp/ocprotectfs-verify/mount}"
-BACKSTORE="${BACKSTORE:-/tmp/ocprotectfs-verify/backstore}"
+# Prefer /private/tmp over /tmp on macOS. On macOS, /tmp is typically a symlink to
+# /private/tmp, and macFUSE can be picky about symlinked mountpoint paths.
+MOUNTPOINT="${MOUNTPOINT:-/private/tmp/ocprotectfs-verify/mount}"
+BACKSTORE="${BACKSTORE:-/private/tmp/ocprotectfs-verify/backstore}"
 
 # Parse minimal flags (avoid extra deps)
 while [[ $# -gt 0 ]]; do
@@ -51,12 +53,16 @@ fi
 
 cd "$ROOT_DIR"
 
-# Node 25.x is known to be unstable with fuse-native on macOS.
-# Default behavior: refuse to run on Node >= 25 unless explicitly forced.
+# Node 25.x is known to be unstable with the *legacy* Node fuse-native implementation on macOS.
+# This verification script forces the preferred Swift daemon path, so Node major version
+# should not matter in practice.
+#
+# If you explicitly force the legacy Node impl (OCPROTECTFS_FUSE_IMPL=node), we keep the
+# old guard to avoid confusing SIGSEGV crashes.
 NODE_MAJOR="$(node -p 'Number(process.versions.node.split(".")[0])')"
-if [[ "$NODE_MAJOR" -ge 25 ]] && [[ "${OCPROTECTFS_RUN_REAL_MOUNT_TESTS:-}" != "1" ]]; then
-  echo "SKIP: Node ${NODE_MAJOR}.x detected (known fuse-native instability on macOS)."
-  echo "      Use Node 22/24 LTS for this verification run, or force with:"
+if [[ "${OCPROTECTFS_FUSE_IMPL:-}" == "node" ]] && [[ "$NODE_MAJOR" -ge 25 ]] && [[ "${OCPROTECTFS_RUN_REAL_MOUNT_TESTS:-}" != "1" ]]; then
+  echo "SKIP: Node ${NODE_MAJOR}.x detected (known fuse-native instability on macOS for OCPROTECTFS_FUSE_IMPL=node)."
+  echo "      Prefer the Swift daemon (default on macOS), use Node 22/24 LTS, or force with:"
   echo "        OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 bash scripts/real-mount-verify.sh"
   exit 0
 fi
