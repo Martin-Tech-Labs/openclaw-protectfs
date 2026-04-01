@@ -46,7 +46,7 @@ Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
 - In CI, real-mount tests are skipped by default; set `OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1` to force-enable.
 - Opt-out: set `OCPROTECTFS_SKIP_REAL_MOUNT_TESTS=1`.
 
-- [x] Unit tests: `npm test` / `make test` exit cleanly on Node v25.6.1 (local run 2026-03-25). If hangs recur, investigate open handles / Node test runner behavior; CI runs `make test` on ubuntu-latest.
+- [x] Unit tests: `npm test` / `make test` exit cleanly on Node v25.6.1 (local run 2026-04-01). Real-mount tests are skipped on Node >= 25 by default (known `fuse-native` instability); use Node 22/24 LTS (recommended) or set `OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1` to force. If hangs recur, investigate open handles / Node test runner behavior; CI runs `make test` on ubuntu-latest.
 - [ ] Real mount verification on macOS (with macFUSE installed):
   - [ ] Wrapper mounts `~/.openclaw` over an existing OpenClaw install.
   - [ ] Keychain prompt appears on first run and KEK is stored at:
