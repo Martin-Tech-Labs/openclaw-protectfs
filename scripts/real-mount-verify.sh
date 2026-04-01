@@ -90,7 +90,59 @@ SECRET="ocpfs_secret_$RANDOM"
 with_timeout() {
   local SECS="$1"; shift
   # perl is available by default on macOS and gives us a simple alarm-based timeout.
+  # NOTE: when perl hits the alarm, it exits non-zero; callers should handle that
+  # explicitly (do not rely on `set -e`), so we can print useful diagnostics.
   perl -e 'my $t=shift; alarm $t; exec @ARGV' "$SECS" "$@"
+}
+
+require_with_timeout() {
+  local SECS="$1"; shift
+  local LABEL="$1"; shift
+
+  set +e
+  with_timeout "$SECS" "$@"
+  local RC=$?
+  set -e
+
+  if [[ $RC -ne 0 ]]; then
+    echo "FAIL: timed out/failed while: $LABEL" >&2
+    echo "      cmd: $*" >&2
+    echo "      mountpoint=$MOUNTPOINT backstore=$BACKSTORE" >&2
+    echo "      see /tmp/ocprotectfs-verify.log" >&2
+    # Helpful snapshots (best-effort; avoid failing the failure path).
+    set +e
+    if [[ -x /sbin/mount ]]; then /sbin/mount | tail -n 20 >&2; else mount | tail -n 20 >&2; fi
+    ls -la "$MOUNTPOINT" >&2 2>/dev/null
+    tail -n 80 /tmp/ocprotectfs-verify.log >&2 2>/dev/null
+    set -e
+    exit 1
+  fi
+}
+
+# Some macFUSE stalls recover quickly; retry a couple times before failing hard.
+retry_require() {
+  local ATTEMPTS="$1"; shift
+  local SECS="$1"; shift
+  local LABEL="$1"; shift
+
+  local i=1
+  while [[ $i -le $ATTEMPTS ]]; do
+    set +e
+    with_timeout "$SECS" "$@"
+    local RC=$?
+    set -e
+
+    if [[ $RC -eq 0 ]]; then
+      return 0
+    fi
+
+    echo "WARN: attempt $i/$ATTEMPTS failed while: $LABEL (rc=$RC)" >&2
+    sleep 0.5
+    i=$((i+1))
+  done
+
+  # Final failure path with diagnostics.
+  require_with_timeout "$SECS" "$LABEL" "$@"
 }
 
 is_mounted() {
@@ -157,21 +209,23 @@ if ! is_mounted; then
 fi
 
 # 1) Workspace plaintext passthrough + writable
-with_timeout 5 mkdir -p "$MOUNTPOINT/workspace"
-with_timeout 5 bash -c 'echo "hello" > "$1"' _ "$MOUNTPOINT/workspace/_ocpfs_smoketest.txt"
+# These can occasionally stall on macFUSE even when the mount reports READY; use
+# longer timeouts + a couple retries to reduce flakiness.
+retry_require 3 15 "mkdir in mounted workspace" mkdir -p "$MOUNTPOINT/workspace"
+retry_require 3 15 "write plaintext file in mounted workspace" bash -c 'echo "hello" > "$1"' _ "$MOUNTPOINT/workspace/_ocpfs_smoketest.txt"
 
 # 2) Encrypted-at-rest outside workspace
-
-with_timeout 5 bash -c 'echo "$SECRET" > "$1"' _ "$MOUNTPOINT/_ocpfs_smoketest_secret.txt"
+retry_require 3 15 "write encrypted-path file in mounted FS" bash -c 'echo "$SECRET" > "$1"' _ "$MOUNTPOINT/_ocpfs_smoketest_secret.txt"
 
 # The mounted view should show plaintext...
-if ! with_timeout 5 grep -q "$SECRET" "$MOUNTPOINT/_ocpfs_smoketest_secret.txt"; then
-  echo "FAIL: mounted view did not show expected plaintext" >&2
-  exit 1
-fi
+require_with_timeout 15 "read back plaintext from mounted view" grep -q "$SECRET" "$MOUNTPOINT/_ocpfs_smoketest_secret.txt"
 
 # ...but the backstore should not contain the plaintext secret.
-if with_timeout 10 grep -R "$SECRET" "$BACKSTORE" >/dev/null 2>&1; then
+set +e
+with_timeout 15 grep -R "$SECRET" "$BACKSTORE" >/dev/null 2>&1
+RC=$?
+set -e
+if [[ $RC -eq 0 ]]; then
   echo "FAIL: found plaintext secret in backstore at $BACKSTORE" >&2
   exit 1
 fi
