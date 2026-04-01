@@ -169,13 +169,52 @@ var ops = makeOperations()
 var fuseArgv: [String] = [argv.first ?? toolName]
 
 // Preserve original args, but ensure mountpoint is included.
+// IMPORTANT: the Swift binary supports ocprotectfs-specific flags (e.g. --backstore,
+// --kek-fd, --plaintext-prefix), but libfuse/macfuse does NOT. If we pass those
+// through to fuse_main_real, macFUSE fails early with an unhelpful
+// "fuse: invalid argument <mountpoint>" error.
+//
+// So: strip our custom flags before calling into libfuse.
 var hasMountpoint = false
-for a in argv.dropFirst() {
+var i = 1
+while i < argv.count {
+  let a = argv[i]
+
+  // Custom flags (consumed by our arg parser) — do not pass to libfuse.
+  if a == "--backstore" || a == "--mountpoint" || a == "--kek-fd" || a == "--plaintext-prefix" {
+    // Skip flag + its value (if present)
+    i += 2
+    continue
+  }
+
+  // Convenience flag for humans: map to the libfuse foreground flag.
+  if a == "--foreground" {
+    fuseArgv.append("-f")
+    i += 1
+    continue
+  }
+
   if a == mountpoint { hasMountpoint = true }
   fuseArgv.append(a)
+  i += 1
 }
+
 if !hasMountpoint {
   fuseArgv.append(mountpoint)
+}
+
+// Wrapper contract requires the FUSE process to stay in the foreground so we
+// can print READY to stdout and remain alive under supervision.
+// libfuse/macfuse defaults to daemonizing unless -f is set.
+if !fuseArgv.contains("-f") {
+  fuseArgv.insert("-f", at: 1)
+}
+
+if ProcessInfo.processInfo.environment["OCPROTECTFS_DEBUG_FUSE_ARGS"] == "1" {
+  fputs("DEBUG: fuse argv:\n", stderr)
+  for a in fuseArgv {
+    fputs("  \(a)\n", stderr)
+  }
 }
 
 let cArgs: [UnsafeMutablePointer<CChar>?] = fuseArgv.map { strdup($0) }

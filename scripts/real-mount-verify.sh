@@ -89,7 +89,10 @@ SECRET="ocpfs_secret_$RANDOM"
 
 is_mounted() {
   # macOS mount output contains: "... on <mountpoint> (....)"
-  mount | grep -F " on $MOUNTPOINT " >/dev/null 2>&1
+  # In some shells, `mount` may not be on PATH; prefer /sbin/mount.
+  local MOUNT_BIN="mount"
+  if [[ -x /sbin/mount ]]; then MOUNT_BIN="/sbin/mount"; fi
+  "$MOUNT_BIN" | grep -F " on $MOUNTPOINT " >/dev/null 2>&1
 }
 
 cleanup() {
@@ -100,7 +103,11 @@ cleanup() {
   fi
 
   # Best-effort unmount (ignore failures)
-  umount "$MOUNTPOINT" >/dev/null 2>&1 || true
+  if [[ -x /sbin/umount ]]; then
+    /sbin/umount "$MOUNTPOINT" >/dev/null 2>&1 || /sbin/umount -f "$MOUNTPOINT" >/dev/null 2>&1 || true
+  else
+    umount "$MOUNTPOINT" >/dev/null 2>&1 || umount -f "$MOUNTPOINT" >/dev/null 2>&1 || true
+  fi
 }
 trap cleanup EXIT
 

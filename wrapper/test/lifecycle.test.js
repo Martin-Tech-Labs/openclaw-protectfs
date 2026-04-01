@@ -435,7 +435,7 @@ test('wrapper lifecycle: best-effort unmount invoked on shutdown', async () => {
     assert.equal(exit.signal, null);
     assert.equal(exit.code, EXIT.OK);
 
-    assert.match(buf, /unmount cmd: umount/, `expected wrapper to attempt umount on shutdown; output was:\n${buf}`);
+    assert.match(buf, /unmount cmd: (?:\/sbin\/)?umount/, `expected wrapper to attempt umount on shutdown; output was:\n${buf}`);
   } finally {
     try {
       wrapper.kill('SIGKILL');
