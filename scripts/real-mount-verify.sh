@@ -51,6 +51,16 @@ fi
 
 cd "$ROOT_DIR"
 
+# Node 25.x is known to be unstable with fuse-native on macOS.
+# Default behavior: refuse to run on Node >= 25 unless explicitly forced.
+NODE_MAJOR="$(node -p 'Number(process.versions.node.split(".")[0])')"
+if [[ "$NODE_MAJOR" -ge 25 ]] && [[ "${OCPROTECTFS_RUN_REAL_MOUNT_TESTS:-}" != "1" ]]; then
+  echo "SKIP: Node ${NODE_MAJOR}.x detected (known fuse-native instability on macOS)."
+  echo "      Use Node 22/24 LTS for this verification run, or force with:"
+  echo "        OCPROTECTFS_RUN_REAL_MOUNT_TESTS=1 bash scripts/real-mount-verify.sh"
+  exit 0
+fi
+
 # Ensure dependencies exist (do not auto-install; keep script side-effect light)
 if [[ ! -d node_modules ]]; then
   echo "ERROR: node_modules/ missing. Run: npm install" >&2
@@ -71,6 +81,11 @@ mkdir -p "$MOUNTPOINT" "$BACKSTORE"
 
 SECRET="ocpfs_secret_$RANDOM"
 
+is_mounted() {
+  # macOS mount output contains: "... on <mountpoint> (....)"
+  mount | grep -F " on $MOUNTPOINT " >/dev/null 2>&1
+}
+
 cleanup() {
   # Attempt unmount + kill any background wrapper
   if [[ -n "${WRAPPER_PID:-}" ]]; then
@@ -88,6 +103,14 @@ trap cleanup EXIT
 # The swift binary is selected via env.
 export OCPROTECTFS_FUSE_SWIFT_BIN="$SWIFT_BIN"
 
+# This script is intended to be run interactively for the Keychain prompt.
+# In non-interactive environments (cron/CI), the wrapper intentionally avoids
+# Keychain access to prevent hangs, so the KEK will be ephemeral.
+if [[ ! -t 0 ]] || [[ ! -t 1 ]]; then
+  echo "NOTE: non-interactive session detected; Keychain-backed KEK verification may be skipped." >&2
+  echo "      Run from an interactive terminal to validate Keychain prompts/ACL behavior." >&2
+fi
+
 node wrapper/ocprotectfs.js \
   --mountpoint "$MOUNTPOINT" \
   --backstore "$BACKSTORE" \
@@ -100,8 +123,19 @@ node wrapper/ocprotectfs.js \
   >/tmp/ocprotectfs-verify.log 2>&1 &
 WRAPPER_PID=$!
 
-# Give FUSE a moment to come up (wrapper already waits for READY, but we still add a small cushion)
+# Give FUSE a moment to come up (wrapper already waits for READY).
 sleep 1
+
+if ! kill -0 "$WRAPPER_PID" >/dev/null 2>&1; then
+  echo "FAIL: wrapper exited early; see /tmp/ocprotectfs-verify.log" >&2
+  exit 1
+fi
+
+if ! is_mounted; then
+  echo "FAIL: mountpoint did not appear mounted at: $MOUNTPOINT" >&2
+  echo "      See /tmp/ocprotectfs-verify.log" >&2
+  exit 1
+fi
 
 # 1) Workspace plaintext passthrough + writable
 mkdir -p "$MOUNTPOINT/workspace"
@@ -113,13 +147,13 @@ echo "$SECRET" > "$MOUNTPOINT/_ocpfs_smoketest_secret.txt"
 
 # The mounted view should show plaintext...
 if ! grep -q "$SECRET" "$MOUNTPOINT/_ocpfs_smoketest_secret.txt"; then
-  echo "FAIL: mounted view did not show expected plaintext"
+  echo "FAIL: mounted view did not show expected plaintext" >&2
   exit 1
 fi
 
 # ...but the backstore should not contain the plaintext secret.
 if grep -R "$SECRET" "$BACKSTORE" >/dev/null 2>&1; then
-  echo "FAIL: found plaintext secret in backstore at $BACKSTORE"
+  echo "FAIL: found plaintext secret in backstore at $BACKSTORE" >&2
   exit 1
 fi
 
@@ -129,22 +163,23 @@ fi
 if security find-generic-password -s ocprotectfs -a kek >/dev/null 2>&1; then
   echo "OK: Keychain item exists (service=ocprotectfs account=kek)"
 else
-  echo "WARN: Keychain item not found yet (service=ocprotectfs account=kek)"
-  echo "      If this is the first run, you may need to approve a Keychain prompt and re-run."
+  echo "WARN: Keychain item not found yet (service=ocprotectfs account=kek)" >&2
+  echo "      If this is the first run, you may need to approve a Keychain prompt and re-run." >&2
 fi
 
-# 4) Fail-closed smoke check (best-effort): after killing supervisor, access should fail.
+# 4) Fail-closed smoke check (best-effort): after killing supervisor, encrypted-path access should fail.
 kill "$WRAPPER_PID" >/dev/null 2>&1 || true
 wait "$WRAPPER_PID" >/dev/null 2>&1 || true
 WRAPPER_PID=""
 
-# Try to read within a short timeout. If it succeeds, that's suspicious.
-# Use perl for a small timeout without extra deps.
+# If liveness gating is working, encrypted-path read should fail quickly once
+# the wrapper process exits.
 if perl -e 'alarm 2; exec @ARGV' cat "$MOUNTPOINT/_ocpfs_smoketest_secret.txt" >/dev/null 2>&1; then
-  echo "WARN: able to read encrypted-path file after supervisor exit (expected fail-closed)."
-  echo "      Check logs: /tmp/ocprotectfs-verify.log"
+  echo "FAIL: able to read encrypted-path file after wrapper exit (expected fail-closed)." >&2
+  echo "      Check logs: /tmp/ocprotectfs-verify.log" >&2
+  exit 1
 else
-  echo "OK: access appears fail-closed after supervisor exit (read failed or timed out)."
+  echo "OK: access appears fail-closed after wrapper exit (read failed or timed out)."
 fi
 
 echo "OK: real-mount verification passed for mountpoint=$MOUNTPOINT backstore=$BACKSTORE"
