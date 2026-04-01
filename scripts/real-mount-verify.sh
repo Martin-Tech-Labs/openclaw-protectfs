@@ -87,6 +87,12 @@ mkdir -p "$MOUNTPOINT" "$BACKSTORE"
 
 SECRET="ocpfs_secret_$RANDOM"
 
+with_timeout() {
+  local SECS="$1"; shift
+  # perl is available by default on macOS and gives us a simple alarm-based timeout.
+  perl -e 'my $t=shift; alarm $t; exec @ARGV' "$SECS" "$@"
+}
+
 is_mounted() {
   # macOS mount output contains: "... on <mountpoint> (....)"
   # In some shells, `mount` may not be on PATH; prefer /sbin/mount.
@@ -104,9 +110,9 @@ cleanup() {
 
   # Best-effort unmount (ignore failures)
   if [[ -x /sbin/umount ]]; then
-    /sbin/umount "$MOUNTPOINT" >/dev/null 2>&1 || /sbin/umount -f "$MOUNTPOINT" >/dev/null 2>&1 || true
+    with_timeout 5 /sbin/umount "$MOUNTPOINT" >/dev/null 2>&1 || with_timeout 5 /sbin/umount -f "$MOUNTPOINT" >/dev/null 2>&1 || true
   else
-    umount "$MOUNTPOINT" >/dev/null 2>&1 || umount -f "$MOUNTPOINT" >/dev/null 2>&1 || true
+    with_timeout 5 umount "$MOUNTPOINT" >/dev/null 2>&1 || with_timeout 5 umount -f "$MOUNTPOINT" >/dev/null 2>&1 || true
   fi
 }
 trap cleanup EXIT
@@ -151,21 +157,21 @@ if ! is_mounted; then
 fi
 
 # 1) Workspace plaintext passthrough + writable
-mkdir -p "$MOUNTPOINT/workspace"
-echo "hello" > "$MOUNTPOINT/workspace/_ocpfs_smoketest.txt"
+with_timeout 5 mkdir -p "$MOUNTPOINT/workspace"
+with_timeout 5 bash -c 'echo "hello" > "$1"' _ "$MOUNTPOINT/workspace/_ocpfs_smoketest.txt"
 
 # 2) Encrypted-at-rest outside workspace
 
-echo "$SECRET" > "$MOUNTPOINT/_ocpfs_smoketest_secret.txt"
+with_timeout 5 bash -c 'echo "$SECRET" > "$1"' _ "$MOUNTPOINT/_ocpfs_smoketest_secret.txt"
 
 # The mounted view should show plaintext...
-if ! grep -q "$SECRET" "$MOUNTPOINT/_ocpfs_smoketest_secret.txt"; then
+if ! with_timeout 5 grep -q "$SECRET" "$MOUNTPOINT/_ocpfs_smoketest_secret.txt"; then
   echo "FAIL: mounted view did not show expected plaintext" >&2
   exit 1
 fi
 
 # ...but the backstore should not contain the plaintext secret.
-if grep -R "$SECRET" "$BACKSTORE" >/dev/null 2>&1; then
+if with_timeout 10 grep -R "$SECRET" "$BACKSTORE" >/dev/null 2>&1; then
   echo "FAIL: found plaintext secret in backstore at $BACKSTORE" >&2
   exit 1
 fi
@@ -173,7 +179,7 @@ fi
 # 3) Keychain KEK existence (best-effort)
 # This should succeed once the supervisor has created the KEK.
 # Note: depending on Keychain ACL policy, this may require user presence.
-if security find-generic-password -s ocprotectfs -a kek >/dev/null 2>&1; then
+if with_timeout 5 security find-generic-password -s ocprotectfs -a kek >/dev/null 2>&1; then
   echo "OK: Keychain item exists (service=ocprotectfs account=kek)"
 else
   echo "WARN: Keychain item not found yet (service=ocprotectfs account=kek)" >&2
