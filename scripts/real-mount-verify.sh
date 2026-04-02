@@ -51,6 +51,18 @@ if [[ ! -d /Library/Filesystems/macfuse.fs ]]; then
   exit 0
 fi
 
+# This script typically triggers a Keychain user-presence prompt.
+# When run in a non-interactive context (cron/CI/no TTY), the prompt can’t be
+# satisfied and the run may hang.
+if [[ ! -t 0 || ! -t 1 ]]; then
+  if [[ "${OCPROTECTFS_ALLOW_NONINTERACTIVE_VERIFY:-}" != "1" ]]; then
+    echo "SKIP: non-interactive shell detected (no TTY)."
+    echo "      Run this from an interactive terminal so Keychain prompts can be handled."
+    echo "      Override (at your own risk): OCPROTECTFS_ALLOW_NONINTERACTIVE_VERIFY=1"
+    exit 0
+  fi
+fi
+
 cd "$ROOT_DIR"
 
 # Node 25.x is known to be unstable with the *legacy* Node fuse-native implementation on macOS.

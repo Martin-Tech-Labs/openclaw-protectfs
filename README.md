@@ -99,6 +99,7 @@ grep -R "secret" ~/.openclaw.real || echo "OK: not found in backstore"
 Optional: run the scripted confidence pass (Issue #161 helper):
 
 ```bash
+# Run from an interactive terminal (Keychain user-presence prompt).
 bash scripts/real-mount-verify.sh
 ```
 
