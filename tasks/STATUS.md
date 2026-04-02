@@ -54,7 +54,7 @@ Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
     - Root cause + fix: merged in PR #168 (issue #167) — strip ocprotectfs-only flags before invoking libfuse + force foreground; scripts prefer `/sbin/{mount,umount}`.
   - Note (2026-04-01): running `scripts/real-mount-verify.sh` from a **non-interactive** session can hang mid-smoketest (observed stuck on `mkdir` inside the mounted FS). The script uses explicit timeouts around mounted-FS ops, but an interactive terminal run is still preferred for the Keychain prompt/ACL validation.
   - PR #171: harden `scripts/real-mount-verify.sh` timeouts + add diagnostics/retries so stalls produce actionable logs.
-  - Pending PR: guard `scripts/real-mount-verify.sh` against non-interactive runs (avoid cron/CI hangs; requires TTY unless overridden).
+  - PR #172: guard `scripts/real-mount-verify.sh` against non-interactive runs (avoid cron/CI hangs; requires TTY unless overridden).
   - [ ] Wrapper mounts `~/.openclaw` over an existing OpenClaw install.
   - [ ] Keychain prompt appears on first run and KEK is stored at:
         `service=ocprotectfs`, `account=kek`.
