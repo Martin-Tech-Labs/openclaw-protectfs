@@ -95,8 +95,6 @@ if [[ ! -x "$SWIFT_BIN" ]]; then
   exit 1
 fi
 
-mkdir -p "$MOUNTPOINT" "$BACKSTORE"
-
 SECRET="ocpfs_secret_$RANDOM"
 
 with_timeout() {
@@ -157,6 +155,69 @@ retry_require() {
   require_with_timeout "$SECS" "$LABEL" "$@"
 }
 
+wedge_hint() {
+  local PATH_KIND="$1"
+  local TARGET="$2"
+  cat >&2 <<EOF
+FAIL: ${PATH_KIND} path appears wedged or unresponsive: $TARGET
+      This host may be in the macFUSE stuck-mount state (for example STAT=U / uninterruptible umount, mkdir, ls).
+      Recovery usually requires a reboot before running real-mount verification again.
+      Refusing to continue so we do not pile up more stuck processes.
+EOF
+  set +e
+  if [[ -x /sbin/mount ]]; then /sbin/mount | tail -n 20 >&2; else mount | tail -n 20 >&2; fi
+  ps -axo pid,ppid,stat,command | grep -E 'ocprotectfs|mount|umount|macfuse' | grep -v grep | tail -n 20 >&2
+  tail -n 80 /tmp/ocprotectfs-verify.log >&2 2>/dev/null
+  set -e
+  exit 1
+}
+
+check_path_responsive() {
+  local PATH_KIND="$1"
+  local TARGET="$2"
+  local PARENT
+  PARENT="$(dirname "$TARGET")"
+
+  if [[ -e "$TARGET" ]]; then
+    set +e
+    with_timeout 3 stat "$TARGET" >/dev/null 2>&1
+    local STAT_RC=$?
+    with_timeout 3 ls -ld "$TARGET" >/dev/null 2>&1
+    local LS_RC=$?
+    set -e
+    if [[ $STAT_RC -ne 0 || $LS_RC -ne 0 ]]; then
+      wedge_hint "$PATH_KIND" "$TARGET"
+    fi
+    return 0
+  fi
+
+  set +e
+  with_timeout 3 mkdir -p "$PARENT" >/dev/null 2>&1
+  local MKPARENT_RC=$?
+  with_timeout 3 stat "$PARENT" >/dev/null 2>&1
+  local PARENT_STAT_RC=$?
+  set -e
+  if [[ $MKPARENT_RC -ne 0 || $PARENT_STAT_RC -ne 0 ]]; then
+    wedge_hint "$PATH_KIND parent" "$PARENT"
+  fi
+
+  local PROBE="$TARGET.ocpfs-probe.$$"
+  set +e
+  with_timeout 3 mkdir "$PROBE" >/dev/null 2>&1
+  local MKPROBE_RC=$?
+  if [[ $MKPROBE_RC -eq 0 ]]; then
+    with_timeout 3 rmdir "$PROBE" >/dev/null 2>&1
+    local RMPROBE_RC=$?
+  else
+    local RMPROBE_RC=0
+  fi
+  set -e
+
+  if [[ $MKPROBE_RC -ne 0 || $RMPROBE_RC -ne 0 ]]; then
+    wedge_hint "$PATH_KIND parent" "$PARENT"
+  fi
+}
+
 is_mounted() {
   # macOS mount output contains: "... on <mountpoint> (....)"
   # In some shells, `mount` may not be on PATH; prefer /sbin/mount.
@@ -180,6 +241,11 @@ cleanup() {
   fi
 }
 trap cleanup EXIT
+
+check_path_responsive "mountpoint" "$MOUNTPOINT"
+check_path_responsive "backstore" "$BACKSTORE"
+
+mkdir -p "$MOUNTPOINT" "$BACKSTORE"
 
 # Start supervisor with dummy gateway so we can verify mount/encryption in isolation.
 # NOTE: --fuse-bin is 'node' because we launch the Node entrypoint which then spawns Swift.

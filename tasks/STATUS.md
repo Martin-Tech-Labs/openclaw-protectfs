@@ -78,6 +78,10 @@ Focus: verify the Keychain/FD KEK path with the *real mount* on macOS.
 - (none)
 
 ## In progress
+- #175 Real-mount verify wedge guard
+  - Goal: preflight the mountpoint/backstore paths with short timeouts before risky filesystem ops.
+  - If the host is already in the macFUSE stuck-mount state (STAT=U style `umount`/`mkdir`/`ls` hangs), abort early with clear reboot-required guidance instead of piling up more wedged processes.
+  - Branch: `toby/issue-175-real-mount-wedge-guard`
 
 ## Final bookkeeping
 - This file/README now explicitly declare **Initial: COMPLETE**.
